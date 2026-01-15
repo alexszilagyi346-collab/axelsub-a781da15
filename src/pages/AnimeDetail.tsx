@@ -1,14 +1,16 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, ArrowLeft, Calendar, Tag } from "lucide-react";
+import { Play, ArrowLeft, Calendar, Tag, X } from "lucide-react";
 import type { Anime } from "@/types/anime";
 
 const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const { data: anime, isLoading } = useQuery({
     queryKey: ["anime", id],
@@ -64,6 +66,30 @@ const AnimeDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      {/* Video Player Modal */}
+      {isPlaying && anime.video_url && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:text-primary z-50"
+            onClick={() => setIsPlaying(false)}
+          >
+            <X className="h-8 w-8" />
+          </Button>
+          <div className="w-full max-w-6xl px-4">
+            <video
+              className="w-full rounded-lg shadow-2xl"
+              controls
+              autoPlay
+              src={anime.video_url}
+            >
+              A böngésződ nem támogatja a videólejátszást.
+            </video>
+          </div>
+        </div>
+      )}
+      
       <main className="pt-16">
         {/* Hero Section */}
         <div className="relative w-full h-[60vh] min-h-[400px] overflow-hidden">
@@ -105,13 +131,25 @@ const AnimeDetail = () => {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              <Button 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2"
-              >
-                <Play className="h-5 w-5 fill-current" />
-                Megtekintés
-              </Button>
+              {anime.video_url ? (
+                <Button 
+                  size="lg" 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2"
+                  onClick={() => setIsPlaying(true)}
+                >
+                  <Play className="h-5 w-5 fill-current" />
+                  Megtekintés
+                </Button>
+              ) : (
+                <Button 
+                  size="lg" 
+                  className="bg-muted text-muted-foreground font-semibold gap-2"
+                  disabled
+                >
+                  <Play className="h-5 w-5" />
+                  Videó nem elérhető
+                </Button>
+              )}
             </div>
           </div>
         </div>
