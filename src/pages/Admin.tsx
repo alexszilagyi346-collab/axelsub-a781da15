@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import Header from "@/components/Header";
+import MALSearch from "@/components/MALSearch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ const Admin = () => {
     genre: "",
     is_featured: false,
     video_url: "",
+    image_url: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -128,9 +130,9 @@ const Admin = () => {
     setUploading(true);
 
     try {
-      let imageUrl = editingAnime?.image_url || null;
+      let imageUrl = formData.image_url || editingAnime?.image_url || null;
 
-      // Upload image if selected
+      // Upload image if file selected (overrides URL)
       if (imageFile) {
         imageUrl = await uploadFile(imageFile, "images");
       }
@@ -169,7 +171,7 @@ const Admin = () => {
       }
 
       // Reset form
-      setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "" });
+      setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "", image_url: "" });
       setImageFile(null);
       setImagePreview(null);
       setEditingAnime(null);
@@ -191,6 +193,7 @@ const Admin = () => {
       genre: anime.genre || "",
       is_featured: anime.is_featured || false,
       video_url: anime.video_url || "",
+      image_url: anime.image_url || "",
     });
     setImagePreview(anime.image_url);
     setShowForm(true);
@@ -214,7 +217,7 @@ const Admin = () => {
   };
 
   const resetForm = () => {
-    setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "" });
+    setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "", image_url: "" });
     setImageFile(null);
     setImagePreview(null);
     setEditingAnime(null);
@@ -261,6 +264,23 @@ const Admin = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* MAL Search */}
+                <div className="space-y-2">
+                  <Label>Keresés MyAnimeList-en</Label>
+                  <MALSearch
+                    onSelect={(data) => {
+                      setFormData({
+                        ...formData,
+                        title: data.title,
+                        description: data.description,
+                        genre: data.genre,
+                        image_url: data.image_url,
+                      });
+                      setImagePreview(data.image_url);
+                    }}
+                  />
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Left Column - Text Fields */}
                   <div className="space-y-4">
