@@ -1,0 +1,190 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+interface AuthModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  defaultMode?: "signin" | "signup";
+}
+
+const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) => {
+  const [mode, setMode] = useState<"signin" | "signup">(defaultMode);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (mode === "signup") {
+        const { error } = await signUp(email, password);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Sikeres regisztráció! Most már bejelentkezhetsz.");
+          setMode("signin");
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Sikeres bejelentkezés!");
+          onClose();
+        }
+      }
+    } catch (err) {
+      toast.error("Hiba történt. Próbáld újra.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-foreground">
+                {mode === "signin" ? "Bejelentkezés" : "Regisztráció"}
+              </h2>
+              <p className="text-muted-foreground mt-2">
+                {mode === "signin"
+                  ? "Jelentkezz be a fiókodba"
+                  : "Hozz létre egy új fiókot"}
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-foreground">
+                  Email cím
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="pelda@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 bg-background border-border"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-foreground">
+                  Jelszó
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 bg-background border-border"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : mode === "signin" ? (
+                  "Bejelentkezés"
+                ) : (
+                  "Regisztráció"
+                )}
+              </Button>
+            </form>
+
+            {/* Toggle Mode */}
+            <div className="mt-6 text-center">
+              <p className="text-muted-foreground">
+                {mode === "signin" ? (
+                  <>
+                    Nincs még fiókod?{" "}
+                    <button
+                      onClick={() => setMode("signup")}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Regisztrálj
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Már van fiókod?{" "}
+                    <button
+                      onClick={() => setMode("signin")}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Jelentkezz be
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default AuthModal;
