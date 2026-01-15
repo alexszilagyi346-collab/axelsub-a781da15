@@ -37,14 +37,13 @@ const Admin = () => {
     description: "",
     genre: "",
     is_featured: false,
+    video_url: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Loading state
   if (authLoading || adminLoading) {
@@ -97,16 +96,6 @@ const Admin = () => {
     }
   };
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error("A videó mérete maximum 50MB lehet!");
-        return;
-      }
-      setVideoFile(file);
-    }
-  };
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     const fileExt = file.name.split(".").pop();
@@ -140,17 +129,10 @@ const Admin = () => {
 
     try {
       let imageUrl = editingAnime?.image_url || null;
-      let videoUrl = editingAnime?.video_url || null;
 
       // Upload image if selected
       if (imageFile) {
         imageUrl = await uploadFile(imageFile, "images");
-      }
-
-      // Upload video if selected
-      if (videoFile) {
-        toast.info("Videó feltöltése folyamatban...");
-        videoUrl = await uploadFile(videoFile, "videos");
       }
 
       if (editingAnime) {
@@ -163,7 +145,7 @@ const Admin = () => {
             genre: formData.genre.trim() || null,
             is_featured: formData.is_featured,
             image_url: imageUrl,
-            video_url: videoUrl,
+            video_url: formData.video_url.trim() || null,
           })
           .eq("id", editingAnime.id);
 
@@ -179,7 +161,7 @@ const Admin = () => {
             genre: formData.genre.trim() || null,
             is_featured: formData.is_featured,
             image_url: imageUrl,
-            video_url: videoUrl,
+            video_url: formData.video_url.trim() || null,
           });
 
         if (error) throw error;
@@ -187,9 +169,8 @@ const Admin = () => {
       }
 
       // Reset form
-      setFormData({ title: "", description: "", genre: "", is_featured: false });
+      setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "" });
       setImageFile(null);
-      setVideoFile(null);
       setImagePreview(null);
       setEditingAnime(null);
       setShowForm(false);
@@ -209,6 +190,7 @@ const Admin = () => {
       description: anime.description || "",
       genre: anime.genre || "",
       is_featured: anime.is_featured || false,
+      video_url: anime.video_url || "",
     });
     setImagePreview(anime.image_url);
     setShowForm(true);
@@ -232,9 +214,8 @@ const Admin = () => {
   };
 
   const resetForm = () => {
-    setFormData({ title: "", description: "", genre: "", is_featured: false });
+    setFormData({ title: "", description: "", genre: "", is_featured: false, video_url: "" });
     setImageFile(null);
-    setVideoFile(null);
     setImagePreview(null);
     setEditingAnime(null);
     setShowForm(false);
@@ -361,27 +342,20 @@ const Admin = () => {
                       />
                     </div>
 
-                    {/* Video Upload */}
+                    {/* Video URL */}
                     <div className="space-y-2">
-                      <Label>Videó (max 50MB)</Label>
-                      <div
-                        onClick={() => videoInputRef.current?.click()}
-                        className="border-2 border-dashed border-border rounded-xl p-6 cursor-pointer hover:border-primary transition-colors text-center"
-                      >
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Video className="h-10 w-10" />
-                          <span>
-                            {videoFile ? videoFile.name : "Kattints a videó feltöltéséhez"}
-                          </span>
-                        </div>
-                      </div>
-                      <input
-                        ref={videoInputRef}
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoSelect}
-                        className="hidden"
+                      <Label htmlFor="video_url">Videó URL</Label>
+                      <Input
+                        id="video_url"
+                        type="url"
+                        value={formData.video_url}
+                        onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                        placeholder="https://example.com/video.mp4"
+                        className="bg-background"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Add meg a videó közvetlen URL-jét (mp4, webm, stb.)
+                      </p>
                     </div>
                   </div>
                 </div>
