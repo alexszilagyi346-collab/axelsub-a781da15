@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { X, Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -13,16 +14,50 @@ interface AuthModalProps {
   defaultMode?: "signin" | "signup";
 }
 
+// Simple math captcha
+const generateCaptcha = () => {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  return { question: `${a} + ${b} = ?`, answer: a + b };
+};
+
 const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) => {
   const [mode, setMode] = useState<"signin" | "signup">(defaultMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [captcha, setCaptcha] = useState(generateCaptcha);
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaVerified, setCaptchaVerified] = useState(false);
   const { signIn, signUp } = useAuth();
+
+  const verifyCaptcha = useCallback(() => {
+    if (parseInt(captchaInput) === captcha.answer) {
+      setCaptchaVerified(true);
+      toast.success("Sikeres ellenőrzés!");
+    } else {
+      toast.error("Hibás válasz, próbáld újra!");
+      setCaptcha(generateCaptcha());
+      setCaptchaInput("");
+    }
+  }, [captchaInput, captcha.answer]);
+
+  const resetCaptcha = () => {
+    setCaptcha(generateCaptcha());
+    setCaptchaInput("");
+    setCaptchaVerified(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!captchaVerified) {
+      toast.error("Kérlek, először igazold, hogy nem vagy robot!");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -33,12 +68,18 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
         } else {
           toast.success("Sikeres regisztráció! Most már bejelentkezhetsz.");
           setMode("signin");
+          resetCaptcha();
         }
       } else {
         const { error } = await signIn(email, password);
         if (error) {
           toast.error(error.message);
         } else {
+          if (rememberMe) {
+            localStorage.setItem("rememberMe", "true");
+          } else {
+            localStorage.removeItem("rememberMe");
+          }
           toast.success("Sikeres bejelentkezés!");
           onClose();
         }
@@ -64,7 +105,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl"
+            className="relative w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
@@ -90,7 +131,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground">
                   Email cím
@@ -139,10 +180,66 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                 </div>
               </div>
 
+              {/* Captcha */}
+              <div className="space-y-2">
+                <Label className="text-foreground flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Nem vagyok robot
+                </Label>
+                <div className="bg-background border border-border rounded-lg p-4">
+                  {captchaVerified ? (
+                    <div className="flex items-center gap-2 text-green-500">
+                      <ShieldCheck className="h-5 w-5" />
+                      <span className="font-medium">Ellenőrizve!</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-muted-foreground text-sm">
+                        Oldd meg a feladatot: <span className="text-foreground font-bold">{captcha.question}</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Válasz"
+                          value={captchaInput}
+                          onChange={(e) => setCaptchaInput(e.target.value)}
+                          className="bg-card border-border flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={verifyCaptcha}
+                          disabled={!captchaInput}
+                        >
+                          Ellenőrzés
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Remember Me - only for signin */}
+              {mode === "signin" && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
+                  <Label
+                    htmlFor="rememberMe"
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
+                    Bejelentkezve maradok
+                  </Label>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                disabled={loading}
+                disabled={loading || !captchaVerified}
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -161,7 +258,10 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                   <>
                     Nincs még fiókod?{" "}
                     <button
-                      onClick={() => setMode("signup")}
+                      onClick={() => {
+                        setMode("signup");
+                        resetCaptcha();
+                      }}
                       className="text-primary hover:underline font-medium"
                     >
                       Regisztrálj
@@ -171,7 +271,10 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                   <>
                     Már van fiókod?{" "}
                     <button
-                      onClick={() => setMode("signin")}
+                      onClick={() => {
+                        setMode("signin");
+                        resetCaptcha();
+                      }}
                       className="text-primary hover:underline font-medium"
                     >
                       Jelentkezz be
