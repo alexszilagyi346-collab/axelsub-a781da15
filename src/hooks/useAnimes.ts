@@ -17,19 +17,18 @@ export const useAnimes = () => {
   });
 };
 
-export const useFeaturedAnime = () => {
+export const useFeaturedAnimes = () => {
   return useQuery({
-    queryKey: ["featured-anime"],
-    queryFn: async (): Promise<Anime | null> => {
+    queryKey: ["featured-animes"],
+    queryFn: async (): Promise<Anime[]> => {
       const { data, error } = await supabase
         .from("animes")
         .select("*")
         .eq("is_featured", true)
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 };
