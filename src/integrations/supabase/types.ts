@@ -47,6 +47,41 @@ export type Database = {
         }
         Relationships: []
       }
+      episodes: {
+        Row: {
+          anime_id: string
+          created_at: string
+          episode_number: number
+          id: string
+          title: string | null
+          video_url: string
+        }
+        Insert: {
+          anime_id: string
+          created_at?: string
+          episode_number: number
+          id?: string
+          title?: string | null
+          video_url: string
+        }
+        Update: {
+          anime_id?: string
+          created_at?: string
+          episode_number?: number
+          id?: string
+          title?: string | null
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_anime_id_fkey"
+            columns: ["anime_id"]
+            isOneToOne: false
+            referencedRelation: "animes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Navigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plus, 
   Upload, 
@@ -10,8 +10,10 @@ import {
   Trash2,
   Star,
   Edit,
-  X
+  X,
+  List
 } from "lucide-react";
+import EpisodeManager from "@/components/EpisodeManager";
 import Header from "@/components/Header";
 import MALSearch from "@/components/MALSearch";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,7 @@ const Admin = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [episodeManagerAnime, setEpisodeManagerAnime] = useState<Anime | null>(null);
   
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -477,6 +480,15 @@ const Admin = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setEpisodeManagerAnime(anime)}
+                        className="text-muted-foreground hover:text-foreground"
+                        title="Epizódok kezelése"
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleEdit(anime)}
                         className="text-muted-foreground hover:text-foreground"
                       >
@@ -498,6 +510,17 @@ const Admin = () => {
           </div>
         </div>
       </main>
+
+      {/* Episode Manager Modal */}
+      <AnimatePresence>
+        {episodeManagerAnime && (
+          <EpisodeManager
+            animeId={episodeManagerAnime.id}
+            animeTitle={episodeManagerAnime.title}
+            onClose={() => setEpisodeManagerAnime(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
