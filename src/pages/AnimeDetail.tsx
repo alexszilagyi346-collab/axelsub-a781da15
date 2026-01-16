@@ -1,16 +1,27 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
+import EpisodeList from "@/components/EpisodeList";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Play, ArrowLeft, Calendar, Tag } from "lucide-react";
 import type { Anime } from "@/types/anime";
+
+interface Episode {
+  id: string;
+  anime_id: string;
+  episode_number: number;
+  title: string | null;
+  video_url: string;
+  created_at: string;
+}
 const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
 
   const { data: anime, isLoading } = useQuery({
     queryKey: ["anime", id],
@@ -67,10 +78,10 @@ const AnimeDetail = () => {
       <Header />
       
       {/* Video Player */}
-      {isPlaying && anime.video_url && (
+      {isPlaying && (selectedEpisode?.video_url || anime.video_url) && (
         <VideoPlayer
-          videoUrl={anime.video_url}
-          title={anime.title}
+          videoUrl={selectedEpisode?.video_url || anime.video_url!}
+          title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
           posterUrl={anime.image_url || undefined}
           onClose={() => setIsPlaying(false)}
         />
@@ -117,14 +128,14 @@ const AnimeDetail = () => {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              {anime.video_url ? (
+              {(selectedEpisode?.video_url || anime.video_url) ? (
                 <Button 
                   size="lg" 
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2"
                   onClick={() => setIsPlaying(true)}
                 >
                   <Play className="h-5 w-5 fill-current" />
-                  Megtekintés
+                  {selectedEpisode ? `${selectedEpisode.episode_number}. epizód lejátszása` : "Megtekintés"}
                 </Button>
               ) : (
                 <Button 
@@ -133,15 +144,27 @@ const AnimeDetail = () => {
                   disabled
                 >
                   <Play className="h-5 w-5" />
-                  Videó nem elérhető
+                  Válassz egy epizódot
                 </Button>
               )}
             </div>
           </div>
         </div>
 
+        {/* Episodes Section */}
+        <div className="container mx-auto px-4 py-8">
+          <EpisodeList
+            animeId={anime.id}
+            onSelectEpisode={(episode) => {
+              setSelectedEpisode(episode);
+              setIsPlaying(true);
+            }}
+            selectedEpisodeId={selectedEpisode?.id}
+          />
+        </div>
+
         {/* Description Section */}
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-8">
           <h2 className="text-2xl font-bold text-foreground mb-4">Leírás</h2>
           <p className="text-muted-foreground text-lg leading-relaxed max-w-3xl">
             {anime.description || "Nincs elérhető leírás ehhez az animéhez."}
