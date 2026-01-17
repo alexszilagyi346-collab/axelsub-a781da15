@@ -50,25 +50,55 @@ export type Database = {
       episodes: {
         Row: {
           anime_id: string
+          backup_video_url: string | null
           created_at: string
+          ed_end: string | null
+          ed_start: string | null
           episode_number: number
           id: string
+          op_end: string | null
+          op_start: string | null
+          quality_1080p: string | null
+          quality_480p: string | null
+          quality_720p: string | null
+          subtitle_type: string | null
+          subtitle_url: string | null
           title: string | null
           video_url: string
         }
         Insert: {
           anime_id: string
+          backup_video_url?: string | null
           created_at?: string
+          ed_end?: string | null
+          ed_start?: string | null
           episode_number: number
           id?: string
+          op_end?: string | null
+          op_start?: string | null
+          quality_1080p?: string | null
+          quality_480p?: string | null
+          quality_720p?: string | null
+          subtitle_type?: string | null
+          subtitle_url?: string | null
           title?: string | null
           video_url: string
         }
         Update: {
           anime_id?: string
+          backup_video_url?: string | null
           created_at?: string
+          ed_end?: string | null
+          ed_start?: string | null
           episode_number?: number
           id?: string
+          op_end?: string | null
+          op_start?: string | null
+          quality_1080p?: string | null
+          quality_480p?: string | null
+          quality_720p?: string | null
+          subtitle_type?: string | null
+          subtitle_url?: string | null
           title?: string | null
           video_url?: string
         }

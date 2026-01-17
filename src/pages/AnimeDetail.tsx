@@ -1,23 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
-import EpisodeList from "@/components/EpisodeList";
+import EpisodeList, { Episode } from "@/components/EpisodeList";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Play, ArrowLeft, Calendar, Tag } from "lucide-react";
 import type { Anime } from "@/types/anime";
-
-interface Episode {
-  id: string;
-  anime_id: string;
-  episode_number: number;
-  title: string | null;
-  video_url: string;
-  created_at: string;
-}
 const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -84,6 +75,16 @@ const AnimeDetail = () => {
           title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
           posterUrl={anime.image_url || undefined}
           onClose={() => setIsPlaying(false)}
+          // New intelligent player props
+          backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
+          quality480p={selectedEpisode?.quality_480p || undefined}
+          quality720p={selectedEpisode?.quality_720p || undefined}
+          quality1080p={selectedEpisode?.quality_1080p || undefined}
+          opStart={selectedEpisode?.op_start || undefined}
+          opEnd={selectedEpisode?.op_end || undefined}
+          edStart={selectedEpisode?.ed_start || undefined}
+          edEnd={selectedEpisode?.ed_end || undefined}
+          subtitleUrl={selectedEpisode?.subtitle_url || undefined}
         />
       )}
       
