@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Play, 
@@ -9,7 +9,10 @@ import {
   Minimize,
   X,
   SkipBack,
-  SkipForward
+  SkipForward,
+  FastForward,
+  Settings,
+  Server
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -19,9 +22,49 @@ interface VideoPlayerProps {
   title: string;
   posterUrl?: string;
   onClose: () => void;
+  // New props for intelligent player
+  backupVideoUrl?: string;
+  quality480p?: string;
+  quality720p?: string;
+  quality1080p?: string;
+  opStart?: string;
+  opEnd?: string;
+  edStart?: string;
+  edEnd?: string;
+  subtitleUrl?: string;
 }
 
-const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) => {
+type QualityOption = "auto" | "1080p" | "720p" | "480p";
+type ServerOption = "primary" | "backup";
+
+// Helper to parse time string (mm:ss or hh:mm:ss) to seconds
+const parseTimeToSeconds = (timeStr: string | undefined): number | null => {
+  if (!timeStr) return null;
+  const parts = timeStr.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  return null;
+};
+
+const VideoPlayer = ({ 
+  videoUrl, 
+  title, 
+  posterUrl, 
+  onClose,
+  backupVideoUrl,
+  quality480p,
+  quality720p,
+  quality1080p,
+  opStart,
+  opEnd,
+  edStart,
+  edEnd,
+  subtitleUrl
+}: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -33,12 +76,71 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // New states for intelligent player
+  const [currentServer, setCurrentServer] = useState<ServerOption>("primary");
+  const [currentQuality, setCurrentQuality] = useState<QualityOption>("auto");
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [showServerMenu, setShowServerMenu] = useState(false);
+  const [showOpSkip, setShowOpSkip] = useState(false);
+  const [showEdSkip, setShowEdSkip] = useState(false);
+  const [opSkipped, setOpSkipped] = useState(false);
+  const [edSkipped, setEdSkipped] = useState(false);
+
+  // Parse timestamps
+  const opStartSec = parseTimeToSeconds(opStart);
+  const opEndSec = parseTimeToSeconds(opEnd);
+  const edStartSec = parseTimeToSeconds(edStart);
+  const edEndSec = parseTimeToSeconds(edEnd);
+
+  // Determine if MKV file
+  const isMkvFile = videoUrl.toLowerCase().endsWith('.mkv');
+
+  // Get current video URL based on server and quality
+  const getCurrentVideoUrl = useCallback(() => {
+    const baseUrl = currentServer === "backup" && backupVideoUrl ? backupVideoUrl : videoUrl;
+    
+    if (currentQuality === "auto") return baseUrl;
+    if (currentQuality === "1080p" && quality1080p) return quality1080p;
+    if (currentQuality === "720p" && quality720p) return quality720p;
+    if (currentQuality === "480p" && quality480p) return quality480p;
+    
+    return baseUrl;
+  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality480p, quality720p, quality1080p]);
+
+  // Available quality options
+  const availableQualities: QualityOption[] = ["auto"];
+  if (quality1080p) availableQualities.push("1080p");
+  if (quality720p) availableQualities.push("720p");
+  if (quality480p) availableQualities.push("480p");
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleTimeUpdate = () => {
+      const time = video.currentTime;
+      setCurrentTime(time);
+      
+      // OP Skip button visibility
+      if (opStartSec !== null && opEndSec !== null && !opSkipped) {
+        if (time >= opStartSec && time <= opEndSec) {
+          setShowOpSkip(true);
+        } else {
+          setShowOpSkip(false);
+        }
+      }
+      
+      // ED Skip button visibility
+      if (edStartSec !== null && edEndSec !== null && !edSkipped) {
+        if (time >= edStartSec && time <= edEndSec) {
+          setShowEdSkip(true);
+        } else {
+          setShowEdSkip(false);
+        }
+      }
+    };
+    
     const handleDurationChange = () => setDuration(video.duration);
     const handleWaiting = () => setIsBuffering(true);
     const handleCanPlay = () => setIsBuffering(false);
@@ -57,7 +159,7 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("ended", handleEnded);
     };
-  }, []);
+  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -67,13 +169,33 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
+  // Handle server/quality change - preserve time position
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    const currentPos = video.currentTime;
+    const wasPlaying = !video.paused;
+    
+    video.src = getCurrentVideoUrl();
+    video.currentTime = currentPos;
+    
+    if (wasPlaying) {
+      video.play().catch(() => {});
+    }
+  }, [currentServer, currentQuality, getCurrentVideoUrl]);
+
   const handleMouseMove = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
+      if (isPlaying) {
+        setShowControls(false);
+        setShowQualityMenu(false);
+        setShowServerMenu(false);
+      }
     }, 3000);
   };
 
@@ -126,6 +248,20 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
     videoRef.current.currentTime += seconds;
   };
 
+  const skipOpening = () => {
+    if (!videoRef.current || opEndSec === null) return;
+    videoRef.current.currentTime = opEndSec;
+    setOpSkipped(true);
+    setShowOpSkip(false);
+  };
+
+  const skipEnding = () => {
+    if (!videoRef.current || edEndSec === null) return;
+    videoRef.current.currentTime = edEndSec;
+    setEdSkipped(true);
+    setShowEdSkip(false);
+  };
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -143,6 +279,10 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
         className="fixed inset-0 z-50 bg-black"
         ref={containerRef}
         onMouseMove={handleMouseMove}
+        onClick={() => {
+          setShowQualityMenu(false);
+          setShowServerMenu(false);
+        }}
       >
         {/* Close Button */}
         <motion.div
@@ -167,16 +307,71 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
           className="absolute top-4 left-4 z-50"
         >
           <h2 className="text-xl font-bold text-white drop-shadow-lg">{title}</h2>
+          {isMkvFile && (
+            <span className="text-xs text-cyan-400 font-medium">SUB-RENDER MÓD</span>
+          )}
         </motion.div>
+
+        {/* Skip OP Button */}
+        <AnimatePresence>
+          {showOpSkip && (
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              className="absolute bottom-32 right-6 z-50"
+            >
+              <Button
+                onClick={skipOpening}
+                className="bg-primary/90 hover:bg-primary text-primary-foreground font-semibold gap-2 backdrop-blur-sm shadow-lg shadow-primary/30"
+              >
+                <FastForward className="h-4 w-4" />
+                Opening átugrása
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Skip ED Button */}
+        <AnimatePresence>
+          {showEdSkip && (
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              className="absolute bottom-32 right-6 z-50"
+            >
+              <Button
+                onClick={skipEnding}
+                className="bg-primary/90 hover:bg-primary text-primary-foreground font-semibold gap-2 backdrop-blur-sm shadow-lg shadow-primary/30"
+              >
+                <FastForward className="h-4 w-4" />
+                Ending átugrása
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Video */}
         <video
           ref={videoRef}
           className="w-full h-full object-contain"
-          src={videoUrl}
+          src={getCurrentVideoUrl()}
           poster={posterUrl}
           onClick={togglePlay}
-        />
+          crossOrigin="anonymous"
+        >
+          {/* Subtitle track if provided */}
+          {subtitleUrl && (
+            <track 
+              kind="subtitles" 
+              src={subtitleUrl} 
+              srcLang="hu" 
+              label="Magyar" 
+              default 
+            />
+          )}
+        </video>
 
         {/* Center Play/Pause Button */}
         <AnimatePresence>
@@ -228,6 +423,25 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-purple-400 rounded-full"
                   style={{ width: `${progress}%` }}
                 />
+                {/* OP/ED markers */}
+                {opStartSec !== null && opEndSec !== null && duration > 0 && (
+                  <div 
+                    className="absolute inset-y-0 bg-cyan-500/50"
+                    style={{ 
+                      left: `${(opStartSec / duration) * 100}%`,
+                      width: `${((opEndSec - opStartSec) / duration) * 100}%`
+                    }}
+                  />
+                )}
+                {edStartSec !== null && edEndSec !== null && duration > 0 && (
+                  <div 
+                    className="absolute inset-y-0 bg-cyan-500/50"
+                    style={{ 
+                      left: `${(edStartSec / duration) * 100}%`,
+                      width: `${((edEndSec - edStartSec) / duration) * 100}%`
+                    }}
+                  />
+                )}
                 {/* Slider */}
                 <Slider
                   value={[currentTime]}
@@ -246,18 +460,18 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
 
             {/* Control Buttons */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
                 {/* Play/Pause */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="w-12 h-12 rounded-full bg-white/10 hover:bg-primary flex items-center justify-center backdrop-blur-sm transition-colors"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-primary flex items-center justify-center backdrop-blur-sm transition-colors"
                   onClick={togglePlay}
                 >
                   {isPlaying ? (
-                    <Pause className="h-5 w-5 text-white" fill="currentColor" />
+                    <Pause className="h-4 w-4 md:h-5 md:w-5 text-white" fill="currentColor" />
                   ) : (
-                    <Play className="h-5 w-5 text-white ml-0.5" fill="currentColor" />
+                    <Play className="h-4 w-4 md:h-5 md:w-5 text-white ml-0.5" fill="currentColor" />
                   )}
                 </motion.button>
 
@@ -265,34 +479,34 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
                   onClick={() => skip(-10)}
                 >
-                  <SkipBack className="h-4 w-4 text-white" />
+                  <SkipBack className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </motion.button>
 
                 {/* Skip Forward */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
                   onClick={() => skip(10)}
                 >
-                  <SkipForward className="h-4 w-4 text-white" />
+                  <SkipForward className="h-3 w-3 md:h-4 md:w-4 text-white" />
                 </motion.button>
 
                 {/* Volume */}
-                <div className="flex items-center gap-2 group/volume">
+                <div className="hidden sm:flex items-center gap-2 group/volume">
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
                     onClick={toggleMute}
                   >
                     {isMuted ? (
-                      <VolumeX className="h-4 w-4 text-white" />
+                      <VolumeX className="h-3 w-3 md:h-4 md:w-4 text-white" />
                     ) : (
-                      <Volume2 className="h-4 w-4 text-white" />
+                      <Volume2 className="h-3 w-3 md:h-4 md:w-4 text-white" />
                     )}
                   </motion.button>
                   <div className="w-0 group-hover/volume:w-24 overflow-hidden transition-all duration-300">
@@ -307,23 +521,118 @@ const VideoPlayer = ({ videoUrl, title, posterUrl, onClose }: VideoPlayerProps) 
                 </div>
 
                 {/* Time */}
-                <span className="text-white text-sm font-medium tabular-nums">
+                <span className="text-white text-xs md:text-sm font-medium tabular-nums">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
+                {/* Server Selector */}
+                {backupVideoUrl && (
+                  <div className="relative">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowServerMenu(!showServerMenu);
+                        setShowQualityMenu(false);
+                      }}
+                    >
+                      <Server className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                    </motion.button>
+                    
+                    <AnimatePresence>
+                      {showServerMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className={`px-4 py-2 text-sm w-full text-left hover:bg-white/10 transition-colors flex items-center gap-2 ${currentServer === "primary" ? "text-primary" : "text-white"}`}
+                            onClick={() => {
+                              setCurrentServer("primary");
+                              setShowServerMenu(false);
+                            }}
+                          >
+                            {currentServer === "primary" && <span className="w-2 h-2 rounded-full bg-primary" />}
+                            Elsődleges szerver
+                          </button>
+                          <button
+                            className={`px-4 py-2 text-sm w-full text-left hover:bg-white/10 transition-colors flex items-center gap-2 ${currentServer === "backup" ? "text-primary" : "text-white"}`}
+                            onClick={() => {
+                              setCurrentServer("backup");
+                              setShowServerMenu(false);
+                            }}
+                          >
+                            {currentServer === "backup" && <span className="w-2 h-2 rounded-full bg-primary" />}
+                            Tartalék szerver
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Quality Selector */}
+                {availableQualities.length > 1 && (
+                  <div className="relative">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowQualityMenu(!showQualityMenu);
+                        setShowServerMenu(false);
+                      }}
+                    >
+                      <Settings className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                    </motion.button>
+                    
+                    <AnimatePresence>
+                      {showQualityMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {availableQualities.map((quality) => (
+                            <button
+                              key={quality}
+                              className={`px-4 py-2 text-sm w-full text-left hover:bg-white/10 transition-colors flex items-center gap-2 ${currentQuality === quality ? "text-primary" : "text-white"}`}
+                              onClick={() => {
+                                setCurrentQuality(quality);
+                                setShowQualityMenu(false);
+                              }}
+                            >
+                              {currentQuality === quality && <span className="w-2 h-2 rounded-full bg-primary" />}
+                              {quality === "auto" ? "Automatikus" : quality}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 {/* Fullscreen */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
                   onClick={toggleFullscreen}
                 >
                   {isFullscreen ? (
-                    <Minimize className="h-4 w-4 text-white" />
+                    <Minimize className="h-3 w-3 md:h-4 md:w-4 text-white" />
                   ) : (
-                    <Maximize className="h-4 w-4 text-white" />
+                    <Maximize className="h-3 w-3 md:h-4 md:w-4 text-white" />
                   )}
                 </motion.button>
               </div>
