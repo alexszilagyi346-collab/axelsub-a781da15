@@ -145,6 +145,11 @@ const VideoPlayer = ({
     const handleWaiting = () => setIsBuffering(true);
     const handleCanPlay = () => setIsBuffering(false);
     const handlePlaying = () => setIsBuffering(false);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setIsBuffering(false);
+    };
+    const handlePause = () => setIsPlaying(false);
     const handleEnded = () => setIsPlaying(false);
 
     video.addEventListener("timeupdate", handleTimeUpdate);
@@ -153,6 +158,8 @@ const VideoPlayer = ({
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("canplaythrough", handleCanPlay);
     video.addEventListener("playing", handlePlaying);
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
     video.addEventListener("ended", handleEnded);
 
     return () => {
@@ -162,6 +169,8 @@ const VideoPlayer = ({
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("canplaythrough", handleCanPlay);
       video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
       video.removeEventListener("ended", handleEnded);
     };
   }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped]);
@@ -216,14 +225,22 @@ const VideoPlayer = ({
     }, 3000);
   };
 
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-    } else {
-      videoRef.current.play();
+  const togglePlay = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      if (video.paused) {
+        setIsBuffering(true);
+        await video.play();
+      } else {
+        video.pause();
+      }
+    } catch (err) {
+      // If the browser blocks playback (or CORS fails), avoid getting stuck in buffering.
+      setIsBuffering(false);
+      console.error("Video play failed", err);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
@@ -376,7 +393,6 @@ const VideoPlayer = ({
           src={getCurrentVideoUrl()}
           poster={posterUrl}
           onClick={togglePlay}
-          crossOrigin="anonymous"
         >
           {/* Subtitle track if provided */}
           {subtitleUrl && (
