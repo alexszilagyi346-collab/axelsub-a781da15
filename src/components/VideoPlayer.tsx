@@ -74,7 +74,7 @@ const VideoPlayer = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [isBuffering, setIsBuffering] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   
   // New states for intelligent player
@@ -144,12 +144,15 @@ const VideoPlayer = ({
     const handleDurationChange = () => setDuration(video.duration);
     const handleWaiting = () => setIsBuffering(true);
     const handleCanPlay = () => setIsBuffering(false);
+    const handlePlaying = () => setIsBuffering(false);
     const handleEnded = () => setIsPlaying(false);
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("durationchange", handleDurationChange);
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("canplaythrough", handleCanPlay);
+    video.addEventListener("playing", handlePlaying);
     video.addEventListener("ended", handleEnded);
 
     return () => {
@@ -157,6 +160,8 @@ const VideoPlayer = ({
       video.removeEventListener("durationchange", handleDurationChange);
       video.removeEventListener("waiting", handleWaiting);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("canplaythrough", handleCanPlay);
+      video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("ended", handleEnded);
     };
   }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped]);
