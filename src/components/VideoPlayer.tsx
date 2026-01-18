@@ -169,10 +169,22 @@ const VideoPlayer = ({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
+  // Track previous server/quality to detect actual changes
+  const prevServerRef = useRef(currentServer);
+  const prevQualityRef = useRef(currentQuality);
+
   // Handle server/quality change - preserve time position
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    
+    // Only update if server or quality actually changed
+    if (prevServerRef.current === currentServer && prevQualityRef.current === currentQuality) {
+      return;
+    }
+    
+    prevServerRef.current = currentServer;
+    prevQualityRef.current = currentQuality;
     
     const currentPos = video.currentTime;
     const wasPlaying = !video.paused;
