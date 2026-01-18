@@ -32,6 +32,10 @@ interface VideoPlayerProps {
   edStart?: string;
   edEnd?: string;
   subtitleUrl?: string;
+  // Next episode props
+  hasNextEpisode?: boolean;
+  onNextEpisode?: () => void;
+  nextEpisodeTitle?: string;
 }
 
 type QualityOption = "auto" | "1080p" | "720p" | "480p";
@@ -63,7 +67,10 @@ const VideoPlayer = ({
   opEnd,
   edStart,
   edEnd,
-  subtitleUrl
+  subtitleUrl,
+  hasNextEpisode,
+  onNextEpisode,
+  nextEpisodeTitle
 }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,6 +93,12 @@ const VideoPlayer = ({
   const [showEdSkip, setShowEdSkip] = useState(false);
   const [opSkipped, setOpSkipped] = useState(false);
   const [edSkipped, setEdSkipped] = useState(false);
+  
+  // Next episode states
+  const [showNextEpisode, setShowNextEpisode] = useState(false);
+  const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState(10);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const countdownIntervalRef = useRef<NodeJS.Timeout>();
 
   // Parse timestamps
   const opStartSec = parseTimeToSeconds(opStart);
@@ -150,7 +163,14 @@ const VideoPlayer = ({
       setIsBuffering(false);
     };
     const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      // Show next episode panel if available
+      if (hasNextEpisode && onNextEpisode) {
+        setShowNextEpisode(true);
+        setNextEpisodeCountdown(10);
+      }
+    };
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("durationchange", handleDurationChange);
@@ -173,7 +193,32 @@ const VideoPlayer = ({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped]);
+  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped, hasNextEpisode, onNextEpisode]);
+
+  // Next episode countdown effect
+  useEffect(() => {
+    if (showNextEpisode && autoPlayEnabled && nextEpisodeCountdown > 0) {
+      countdownIntervalRef.current = setInterval(() => {
+        setNextEpisodeCountdown((prev) => {
+          if (prev <= 1) {
+            // Auto-play next episode
+            if (onNextEpisode) {
+              onNextEpisode();
+            }
+            setShowNextEpisode(false);
+            return 10;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, [showNextEpisode, autoPlayEnabled, onNextEpisode]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -382,6 +427,81 @@ const VideoPlayer = ({
                 <FastForward className="h-4 w-4" />
                 Ending átugrása
               </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Next Episode Panel */}
+        <AnimatePresence>
+          {showNextEpisode && hasNextEpisode && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            >
+              <div className="bg-card/90 backdrop-blur-md rounded-2xl p-8 max-w-md w-full mx-4 border border-border shadow-2xl">
+                <h3 className="text-2xl font-bold text-foreground mb-2">Következő epizód</h3>
+                {nextEpisodeTitle && (
+                  <p className="text-muted-foreground mb-6">{nextEpisodeTitle}</p>
+                )}
+                
+                {autoPlayEnabled && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-muted-foreground text-sm">Automatikus lejátszás</span>
+                      <span className="text-primary font-bold text-xl">{nextEpisodeCountdown}s</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary"
+                        initial={{ width: "100%" }}
+                        animate={{ width: `${(nextEpisodeCountdown / 10) * 100}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex flex-col gap-3">
+                  <Button
+                    size="lg"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2"
+                    onClick={() => {
+                      if (onNextEpisode) onNextEpisode();
+                      setShowNextEpisode(false);
+                    }}
+                  >
+                    <Play className="h-5 w-5 fill-current" />
+                    Lejátszás most
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setAutoPlayEnabled(!autoPlayEnabled);
+                        if (!autoPlayEnabled) {
+                          setNextEpisodeCountdown(10);
+                        }
+                      }}
+                    >
+                      {autoPlayEnabled ? "Auto-play kikapcs." : "Auto-play bekapcs."}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowNextEpisode(false);
+                        onClose();
+                      }}
+                    >
+                      Bezárás
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

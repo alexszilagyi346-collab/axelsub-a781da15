@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -13,6 +13,7 @@ const AnimeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
 
   const { data: anime, isLoading } = useQuery({
     queryKey: ["anime", id],
@@ -29,6 +30,26 @@ const AnimeDetail = () => {
     },
     enabled: !!id,
   });
+
+  // Calculate next episode info
+  const nextEpisodeInfo = useMemo(() => {
+    if (!selectedEpisode || episodes.length === 0) return null;
+    
+    const currentIndex = episodes.findIndex(ep => ep.id === selectedEpisode.id);
+    if (currentIndex === -1 || currentIndex >= episodes.length - 1) return null;
+    
+    const nextEp = episodes[currentIndex + 1];
+    return {
+      episode: nextEp,
+      title: `${nextEp.episode_number}. epizód${nextEp.title ? `: ${nextEp.title}` : ""}`
+    };
+  }, [selectedEpisode, episodes]);
+
+  const handleNextEpisode = () => {
+    if (nextEpisodeInfo) {
+      setSelectedEpisode(nextEpisodeInfo.episode);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -85,6 +106,10 @@ const AnimeDetail = () => {
           edStart={selectedEpisode?.ed_start || undefined}
           edEnd={selectedEpisode?.ed_end || undefined}
           subtitleUrl={selectedEpisode?.subtitle_url || undefined}
+          // Next episode props
+          hasNextEpisode={!!nextEpisodeInfo}
+          onNextEpisode={handleNextEpisode}
+          nextEpisodeTitle={nextEpisodeInfo?.title}
         />
       )}
       
@@ -161,6 +186,7 @@ const AnimeDetail = () => {
               setIsPlaying(true);
             }}
             selectedEpisodeId={selectedEpisode?.id}
+            onEpisodesLoaded={setEpisodes}
           />
         </div>
 
