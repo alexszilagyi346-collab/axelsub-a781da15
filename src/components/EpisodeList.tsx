@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, Loader2, FastForward, Server, Subtitles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +28,10 @@ interface EpisodeListProps {
   animeId: string;
   onSelectEpisode: (episode: Episode) => void;
   selectedEpisodeId?: string;
+  onEpisodesLoaded?: (episodes: Episode[]) => void;
 }
 
-const EpisodeList = ({ animeId, onSelectEpisode, selectedEpisodeId }: EpisodeListProps) => {
+const EpisodeList = ({ animeId, onSelectEpisode, selectedEpisodeId, onEpisodesLoaded }: EpisodeListProps) => {
   const { data: episodes, isLoading } = useQuery({
     queryKey: ["episodes", animeId],
     queryFn: async (): Promise<Episode[]> => {
@@ -43,6 +45,13 @@ const EpisodeList = ({ animeId, onSelectEpisode, selectedEpisodeId }: EpisodeLis
       return data || [];
     },
   });
+
+  // Notify parent when episodes are loaded
+  useEffect(() => {
+    if (episodes && onEpisodesLoaded) {
+      onEpisodesLoaded(episodes);
+    }
+  }, [episodes, onEpisodesLoaded]);
 
   if (isLoading) {
     return (
