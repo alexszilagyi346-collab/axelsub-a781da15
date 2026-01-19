@@ -110,20 +110,22 @@ const VideoPlayer = ({
   const isMkvFile = videoUrl.toLowerCase().endsWith('.mkv');
 
   // Get current video URL based on server and quality
+  // Base URL is treated as 1080p (highest quality)
   const getCurrentVideoUrl = useCallback(() => {
     const baseUrl = currentServer === "backup" && backupVideoUrl ? backupVideoUrl : videoUrl;
     
-    if (currentQuality === "auto") return baseUrl;
-    if (currentQuality === "1080p" && quality1080p) return quality1080p;
+    // Auto and 1080p use the base URL (which is highest quality)
+    if (currentQuality === "auto" || currentQuality === "1080p") return baseUrl;
     if (currentQuality === "720p" && quality720p) return quality720p;
     if (currentQuality === "480p" && quality480p) return quality480p;
     
     return baseUrl;
-  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality480p, quality720p, quality1080p]);
+  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality480p, quality720p]);
 
-  // Available quality options
-  const availableQualities: QualityOption[] = ["auto"];
-  if (quality1080p) availableQualities.push("1080p");
+  // Available quality options - base URL is always 1080p
+  // Show quality selector if there are lower quality alternatives
+  const hasLowerQualities = quality720p || quality480p;
+  const availableQualities: QualityOption[] = ["auto", "1080p"];
   if (quality720p) availableQualities.push("720p");
   if (quality480p) availableQualities.push("480p");
 
@@ -731,8 +733,8 @@ const VideoPlayer = ({
                   </div>
                 )}
 
-                {/* Quality Selector */}
-                {availableQualities.length > 1 && (
+                {/* Quality Selector - show if there are lower quality options */}
+                {hasLowerQualities && (
                   <div className="relative">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
