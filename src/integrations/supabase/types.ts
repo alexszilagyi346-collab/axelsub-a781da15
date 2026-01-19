@@ -59,6 +59,7 @@ export type Database = {
           op_end: string | null
           op_start: string | null
           quality_1080p: string | null
+          quality_360p: string | null
           quality_480p: string | null
           quality_720p: string | null
           subtitle_type: string | null
@@ -77,6 +78,7 @@ export type Database = {
           op_end?: string | null
           op_start?: string | null
           quality_1080p?: string | null
+          quality_360p?: string | null
           quality_480p?: string | null
           quality_720p?: string | null
           subtitle_type?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           op_end?: string | null
           op_start?: string | null
           quality_1080p?: string | null
+          quality_360p?: string | null
           quality_480p?: string | null
           quality_720p?: string | null
           subtitle_type?: string | null

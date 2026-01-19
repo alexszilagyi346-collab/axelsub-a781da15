@@ -17,6 +17,7 @@ export interface Episode {
   ed_start: string | null;
   ed_end: string | null;
   backup_video_url: string | null;
+  quality_360p: string | null;
   quality_480p: string | null;
   quality_720p: string | null;
   quality_1080p: string | null;
@@ -73,7 +74,7 @@ const EpisodeList = ({ animeId, onSelectEpisode, selectedEpisodeId, onEpisodesLo
           const hasSkipButtons = (episode.op_start && episode.op_end) || (episode.ed_start && episode.ed_end);
           const hasBackup = !!episode.backup_video_url;
           const hasSubtitle = !!episode.subtitle_url;
-          const hasMultiQuality = episode.quality_480p || episode.quality_720p || episode.quality_1080p;
+          const hasMultiQuality = episode.quality_360p || episode.quality_480p || episode.quality_720p || episode.quality_1080p;
 
           return (
             <motion.button
