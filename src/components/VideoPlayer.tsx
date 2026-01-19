@@ -733,9 +733,8 @@ const VideoPlayer = ({
                   </div>
                 )}
 
-                {/* Quality Selector - show if there are lower quality options */}
-                {hasLowerQualities && (
-                  <div className="relative">
+                {/* Quality Selector - always visible */}
+                <div className="relative">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
@@ -774,9 +773,7 @@ const VideoPlayer = ({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                )}
-
+                </div>
                 {/* Fullscreen */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
