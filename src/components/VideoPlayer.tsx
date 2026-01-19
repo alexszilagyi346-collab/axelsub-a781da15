@@ -24,6 +24,7 @@ interface VideoPlayerProps {
   onClose: () => void;
   // New props for intelligent player
   backupVideoUrl?: string;
+  quality360p?: string;
   quality480p?: string;
   quality720p?: string;
   quality1080p?: string;
@@ -38,7 +39,7 @@ interface VideoPlayerProps {
   nextEpisodeTitle?: string;
 }
 
-type QualityOption = "auto" | "1080p" | "720p" | "480p";
+type QualityOption = "auto" | "1080p" | "720p" | "480p" | "360p";
 type ServerOption = "primary" | "backup";
 
 // Helper to parse time string (mm:ss or hh:mm:ss) to seconds
@@ -60,6 +61,7 @@ const VideoPlayer = ({
   posterUrl, 
   onClose,
   backupVideoUrl,
+  quality360p,
   quality480p,
   quality720p,
   quality1080p,
@@ -118,16 +120,18 @@ const VideoPlayer = ({
     if (currentQuality === "auto" || currentQuality === "1080p") return baseUrl;
     if (currentQuality === "720p" && quality720p) return quality720p;
     if (currentQuality === "480p" && quality480p) return quality480p;
+    if (currentQuality === "360p" && quality360p) return quality360p;
     
     return baseUrl;
-  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality480p, quality720p]);
+  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality360p, quality480p, quality720p]);
 
   // Available quality options - base URL is always 1080p
   // Show quality selector if there are lower quality alternatives
-  const hasLowerQualities = quality720p || quality480p;
+  const hasLowerQualities = quality720p || quality480p || quality360p;
   const availableQualities: QualityOption[] = ["auto", "1080p"];
   if (quality720p) availableQualities.push("720p");
   if (quality480p) availableQualities.push("480p");
+  if (quality360p) availableQualities.push("360p");
 
   useEffect(() => {
     const video = videoRef.current;

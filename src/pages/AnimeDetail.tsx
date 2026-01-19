@@ -98,6 +98,7 @@ const AnimeDetail = () => {
           onClose={() => setIsPlaying(false)}
           // New intelligent player props
           backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
+          quality360p={selectedEpisode?.quality_360p || undefined}
           quality480p={selectedEpisode?.quality_480p || undefined}
           quality720p={selectedEpisode?.quality_720p || undefined}
           quality1080p={selectedEpisode?.quality_1080p || undefined}
