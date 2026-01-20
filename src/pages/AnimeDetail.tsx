@@ -4,15 +4,17 @@ import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
+import SubtitleVideoPlayer from "@/components/SubtitleVideoPlayer";
 import EpisodeList, { Episode } from "@/components/EpisodeList";
 import FavoriteButton from "@/components/FavoriteButton";
 import WatchlistButton from "@/components/WatchlistButton";
 import RatingStars from "@/components/RatingStars";
 import CommentSection from "@/components/CommentSection";
 import SimilarAnimes from "@/components/SimilarAnimes";
+import SubscribeButton from "@/components/SubscribeButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, ArrowLeft, Calendar, Tag } from "lucide-react";
+import { Play, ArrowLeft, Calendar, Tag, Type } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Anime } from "@/types/anime";
 
@@ -59,6 +61,9 @@ const AnimeDetail = () => {
     }
   };
 
+  // Determine which player to use
+  const hasExternalSubtitle = selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external";
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -97,32 +102,53 @@ const AnimeDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* Video Player */}
+      {/* Video Player - Use SubtitleVideoPlayer for external subtitles */}
       {isPlaying && (selectedEpisode?.video_url || anime.video_url) && (
-        <VideoPlayer
-          videoUrl={selectedEpisode?.video_url || anime.video_url!}
-          title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
-          posterUrl={anime.image_url || undefined}
-          onClose={() => setIsPlaying(false)}
-          // New intelligent player props
-          backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
-          quality360p={selectedEpisode?.quality_360p || undefined}
-          quality480p={selectedEpisode?.quality_480p || undefined}
-          quality720p={selectedEpisode?.quality_720p || undefined}
-          quality1080p={selectedEpisode?.quality_1080p || undefined}
-          opStart={selectedEpisode?.op_start || undefined}
-          opEnd={selectedEpisode?.op_end || undefined}
-          edStart={selectedEpisode?.ed_start || undefined}
-          edEnd={selectedEpisode?.ed_end || undefined}
-          subtitleUrl={selectedEpisode?.subtitle_url || undefined}
-          // Next episode props
-          hasNextEpisode={!!nextEpisodeInfo}
-          onNextEpisode={handleNextEpisode}
-          nextEpisodeTitle={nextEpisodeInfo?.title}
-          // Watch history props
-          animeId={anime.id}
-          episodeId={selectedEpisode?.id}
-        />
+        hasExternalSubtitle ? (
+          <SubtitleVideoPlayer
+            videoUrl={selectedEpisode?.video_url || anime.video_url!}
+            title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
+            posterUrl={anime.image_url || undefined}
+            onClose={() => setIsPlaying(false)}
+            subtitleUrl={selectedEpisode!.subtitle_url!}
+            backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
+            quality360p={selectedEpisode?.quality_360p || undefined}
+            quality480p={selectedEpisode?.quality_480p || undefined}
+            quality720p={selectedEpisode?.quality_720p || undefined}
+            quality1080p={selectedEpisode?.quality_1080p || undefined}
+            opStart={selectedEpisode?.op_start || undefined}
+            opEnd={selectedEpisode?.op_end || undefined}
+            edStart={selectedEpisode?.ed_start || undefined}
+            edEnd={selectedEpisode?.ed_end || undefined}
+            hasNextEpisode={!!nextEpisodeInfo}
+            onNextEpisode={handleNextEpisode}
+            nextEpisodeTitle={nextEpisodeInfo?.title}
+            animeId={anime.id}
+            episodeId={selectedEpisode?.id}
+          />
+        ) : (
+          <VideoPlayer
+            videoUrl={selectedEpisode?.video_url || anime.video_url!}
+            title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
+            posterUrl={anime.image_url || undefined}
+            onClose={() => setIsPlaying(false)}
+            backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
+            quality360p={selectedEpisode?.quality_360p || undefined}
+            quality480p={selectedEpisode?.quality_480p || undefined}
+            quality720p={selectedEpisode?.quality_720p || undefined}
+            quality1080p={selectedEpisode?.quality_1080p || undefined}
+            opStart={selectedEpisode?.op_start || undefined}
+            opEnd={selectedEpisode?.op_end || undefined}
+            edStart={selectedEpisode?.ed_start || undefined}
+            edEnd={selectedEpisode?.ed_end || undefined}
+            subtitleUrl={selectedEpisode?.subtitle_url || undefined}
+            hasNextEpisode={!!nextEpisodeInfo}
+            onNextEpisode={handleNextEpisode}
+            nextEpisodeTitle={nextEpisodeInfo?.title}
+            animeId={anime.id}
+            episodeId={selectedEpisode?.id}
+          />
+        )
       )}
       
       <main className="pt-16">
@@ -174,6 +200,13 @@ const AnimeDetail = () => {
                    anime.status === "ongoing" ? "Folyamatban" : "Beharangozott"}
                 </span>
               )}
+              {/* External subtitle indicator */}
+              {selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external" && (
+                <span className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-cyan-500/20 text-cyan-400">
+                  <Type className="h-3 w-3" />
+                  Külső felirat
+                </span>
+              )}
             </div>
 
             {/* Actions */}
@@ -203,6 +236,9 @@ const AnimeDetail = () => {
               
               {/* Watchlist Button */}
               <WatchlistButton animeId={anime.id} />
+              
+              {/* Subscribe Button - for episode notifications */}
+              <SubscribeButton animeId={anime.id} showLabel />
             </div>
             
             {/* Rating Stars - for logged in users */}
