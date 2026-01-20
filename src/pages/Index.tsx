@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import AnimeGrid from "@/components/AnimeGrid";
+import ContinueWatching from "@/components/ContinueWatching";
 
 const Index = () => {
   return (
@@ -9,6 +10,7 @@ const Index = () => {
       
       {/* Main Content with top padding for fixed header */}
       <main className="pt-16">
+        <ContinueWatching />
         <HeroBanner />
         <AnimeGrid />
       </main>

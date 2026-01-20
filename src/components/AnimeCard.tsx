@@ -1,11 +1,23 @@
 import { Link } from "react-router-dom";
 import type { Anime } from "@/types/anime";
+import FavoriteButton from "./FavoriteButton";
+import { useAuth } from "@/hooks/useAuth";
+import { useContinueWatching } from "@/hooks/useWatchHistory";
 
 interface AnimeCardProps {
   anime: Anime;
 }
 
 const AnimeCard = ({ anime }: AnimeCardProps) => {
+  const { user } = useAuth();
+  const { data: continueWatching } = useContinueWatching();
+  
+  // Find progress for this anime
+  const animeProgress = continueWatching?.find(item => item.anime_id === anime.id);
+  const progressPercent = animeProgress?.duration_seconds 
+    ? Math.round((animeProgress.progress_seconds / animeProgress.duration_seconds) * 100)
+    : 0;
+
   return (
     <Link to={`/anime/${anime.id}`} className="block">
       <div className="relative group rounded-lg overflow-hidden border border-border bg-card anime-card-glow cursor-pointer">
@@ -21,6 +33,23 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 gradient-overlay pointer-events-none" />
+        
+        {/* Favorite Button - visible on hover */}
+        {user && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+            <FavoriteButton animeId={anime.id} size="sm" />
+          </div>
+        )}
+        
+        {/* Progress Bar - if user has watch history */}
+        {user && progressPercent > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/50 z-10">
+            <div 
+              className="h-full bg-primary transition-all duration-300" 
+              style={{ width: `${progressPercent}%` }} 
+            />
+          </div>
+        )}
         
         {/* Title */}
         <div className="absolute bottom-0 left-0 right-0 p-4">

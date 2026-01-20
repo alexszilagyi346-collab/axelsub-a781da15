@@ -7,4 +7,7 @@ export interface Anime {
   is_featured: boolean;
   genre: string | null;
   created_at: string;
+  year: number | null;
+  status: string | null;
+  episodes_count: number | null;
 }
