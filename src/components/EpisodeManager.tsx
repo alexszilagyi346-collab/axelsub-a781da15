@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Play, Loader2, X, ChevronDown, ChevronUp, Pencil, Save } from "lucide-react";
+import { Plus, Trash2, Play, Loader2, X, ChevronDown, ChevronUp, Pencil, Save, Upload, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +103,51 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
   const [editAdvanced, setEditAdvanced] = useState(false);
   const [formData, setFormData] = useState<EpisodeFormData>(getEmptyFormData());
   const [editFormData, setEditFormData] = useState<EpisodeFormData>(getEmptyFormData());
+  
+  // Subtitle file upload states
+  const [subtitleFile, setSubtitleFile] = useState<File | null>(null);
+  const [editSubtitleFile, setEditSubtitleFile] = useState<File | null>(null);
+  const [uploadingSubtitle, setUploadingSubtitle] = useState(false);
+  const subtitleInputRef = useRef<HTMLInputElement>(null);
+  const editSubtitleInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload subtitle file to storage
+  const uploadSubtitleFile = async (file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop()?.toLowerCase();
+    const fileName = `subtitles/${animeId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { error } = await supabase.storage
+      .from("animek")
+      .upload(fileName, file);
+
+    if (error) {
+      console.error("Subtitle upload error:", error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("animek")
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  const handleSubtitleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!["ass", "srt", "vtt"].includes(ext || "")) {
+        toast.error("Csak .ass, .srt vagy .vtt fájlok engedélyezettek!");
+        return;
+      }
+      if (isEdit) {
+        setEditSubtitleFile(file);
+      } else {
+        setSubtitleFile(file);
+      }
+      toast.success(`Felirat kiválasztva: ${file.name}`);
+    }
+  };
 
   // Fetch episodes
   const { data: episodes, isLoading } = useQuery({
@@ -216,23 +261,64 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
     setEditAdvanced(false);
   };
 
-  const handleAddEpisode = (e: React.FormEvent) => {
+  const handleAddEpisode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.video_url.trim()) {
       toast.error("A videó URL megadása kötelező!");
       return;
     }
-    addEpisodeMutation.mutate(formData);
+    
+    try {
+      setUploadingSubtitle(true);
+      let finalSubtitleUrl = formData.subtitle_url;
+      
+      // Upload subtitle file if selected
+      if (subtitleFile) {
+        finalSubtitleUrl = await uploadSubtitleFile(subtitleFile);
+      }
+      
+      addEpisodeMutation.mutate({
+        ...formData,
+        subtitle_url: finalSubtitleUrl,
+      });
+      setSubtitleFile(null);
+    } catch (error: any) {
+      toast.error("Hiba a felirat feltöltésekor: " + error.message);
+    } finally {
+      setUploadingSubtitle(false);
+    }
   };
 
-  const handleUpdateEpisode = (e: React.FormEvent) => {
+  const handleUpdateEpisode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEpisodeId) return;
     if (!editFormData.video_url.trim()) {
       toast.error("A videó URL megadása kötelező!");
       return;
     }
-    updateEpisodeMutation.mutate({ id: editingEpisodeId, data: editFormData });
+    
+    try {
+      setUploadingSubtitle(true);
+      let finalSubtitleUrl = editFormData.subtitle_url;
+      
+      // Upload subtitle file if selected
+      if (editSubtitleFile) {
+        finalSubtitleUrl = await uploadSubtitleFile(editSubtitleFile);
+      }
+      
+      updateEpisodeMutation.mutate({ 
+        id: editingEpisodeId, 
+        data: {
+          ...editFormData,
+          subtitle_url: finalSubtitleUrl,
+        }
+      });
+      setEditSubtitleFile(null);
+    } catch (error: any) {
+      toast.error("Hiba a felirat feltöltésekor: " + error.message);
+    } finally {
+      setUploadingSubtitle(false);
+    }
   };
 
   const handleDeleteEpisode = (episode: Episode) => {
@@ -253,6 +339,9 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
     setShowAdvancedState,
     submitLabel,
     submitIcon: SubmitIcon,
+    selectedFile,
+    onFileSelect,
+    fileInputRef,
   }: {
     data: EpisodeFormData;
     setData: React.Dispatch<React.SetStateAction<EpisodeFormData>>;
@@ -263,6 +352,9 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
     setShowAdvancedState: (val: boolean) => void;
     submitLabel: string;
     submitIcon: typeof Plus;
+    selectedFile: File | null;
+    onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    fileInputRef: React.RefObject<HTMLInputElement>;
   }) => (
     <motion.form
       initial={{ opacity: 0, height: 0 }}
@@ -358,30 +450,83 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
         </div>
       </div>
 
-      {/* Subtitle URL - Only show for Player 2 */}
+      {/* Subtitle Settings - Only show for Player 2 */}
       {data.player_type === "player2" && (
-        <div className="space-y-2 p-4 rounded-lg border border-cyan-500/30 bg-cyan-500/5">
+        <div className="space-y-3 p-4 rounded-lg border border-cyan-500/30 bg-cyan-500/5">
           <Label className="text-cyan-400">Külső felirat beállítások</Label>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Felirat URL (.ass/.srt/.vtt) *</Label>
-              <Input
-                type="url"
-                value={data.subtitle_url}
-                onChange={(e) => setData({ ...data, subtitle_url: e.target.value })}
-                placeholder="https://example.com/subtitle.ass"
-                className="bg-background text-sm"
-              />
-              {data.subtitle_url && (
-                <p className="text-xs text-cyan-400">
-                  Formátum: {detectSubtitleFormat(data.subtitle_url)?.toUpperCase() || "Ismeretlen"}
-                </p>
+          
+          {/* File Upload Option */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Felirat fájl feltöltése (.ass/.srt/.vtt)</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                {selectedFile ? selectedFile.name : "Fájl kiválasztása"}
+              </Button>
+              {selectedFile && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    // Clear selected file by triggering empty change
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              A 2-es lejátszó automatikusan betölti és megjeleníti a feliratot.
-            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ass,.srt,.vtt"
+              onChange={onFileSelect}
+              className="hidden"
+            />
+            {selectedFile && (
+              <p className="text-xs text-cyan-400 flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Kiválasztva: {selectedFile.name} ({detectSubtitleFormat(selectedFile.name)?.toUpperCase()})
+              </p>
+            )}
           </div>
+          
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-cyan-500/30" />
+            <span className="text-xs text-muted-foreground">vagy</span>
+            <div className="flex-1 h-px bg-cyan-500/30" />
+          </div>
+          
+          {/* URL Option */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Felirat URL megadása</Label>
+            <Input
+              type="url"
+              value={data.subtitle_url}
+              onChange={(e) => setData({ ...data, subtitle_url: e.target.value })}
+              placeholder="https://example.com/subtitle.ass"
+              className="bg-background text-sm"
+              disabled={!!selectedFile}
+            />
+            {data.subtitle_url && !selectedFile && (
+              <p className="text-xs text-cyan-400">
+                Formátum: {detectSubtitleFormat(data.subtitle_url)?.toUpperCase() || "Ismeretlen"}
+              </p>
+            )}
+          </div>
+          
+          <p className="text-xs text-muted-foreground">
+            A 2-es lejátszó automatikusan betölti és megjeleníti a feliratot.
+          </p>
         </div>
       )}
 
@@ -571,11 +716,14 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
                 setData={setFormData}
                 onSubmit={handleAddEpisode}
                 onCancel={resetAddForm}
-                isPending={addEpisodeMutation.isPending}
+                isPending={addEpisodeMutation.isPending || uploadingSubtitle}
                 showAdvancedState={showAdvanced}
                 setShowAdvancedState={setShowAdvanced}
-                submitLabel="Hozzáadás"
+                submitLabel={uploadingSubtitle ? "Feltöltés..." : "Hozzáadás"}
                 submitIcon={Plus}
+                selectedFile={subtitleFile}
+                onFileSelect={(e) => handleSubtitleFileSelect(e, false)}
+                fileInputRef={subtitleInputRef}
               />
             )}
           </AnimatePresence>
@@ -597,11 +745,14 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
                       setData={setEditFormData}
                       onSubmit={handleUpdateEpisode}
                       onCancel={cancelEdit}
-                      isPending={updateEpisodeMutation.isPending}
+                      isPending={updateEpisodeMutation.isPending || uploadingSubtitle}
                       showAdvancedState={editAdvanced}
                       setShowAdvancedState={setEditAdvanced}
-                      submitLabel="Mentés"
+                      submitLabel={uploadingSubtitle ? "Feltöltés..." : "Mentés"}
                       submitIcon={Save}
+                      selectedFile={editSubtitleFile}
+                      onFileSelect={(e) => handleSubtitleFileSelect(e, true)}
+                      fileInputRef={editSubtitleInputRef}
                     />
                   ) : (
                     <motion.div
