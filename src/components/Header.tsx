@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, Heart, History } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AuthModal from "@/components/AuthModal";
+import NotificationBell from "@/components/NotificationBell";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -86,6 +87,9 @@ const Header = () => {
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Search className="h-5 w-5" />
               </Button>
+
+              {/* Notification Bell - only for logged in users */}
+              {user && <NotificationBell />}
 
               {user ? (
                 <DropdownMenu>
