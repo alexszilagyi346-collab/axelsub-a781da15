@@ -328,13 +328,31 @@ const SubtitleVideoPlayer = ({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  const prevServerRef = useRef(currentServer);
-  const prevQualityRef = useRef(currentQuality);
+  const prevServerRef = useRef<ServerOption | null>(null);
+  const prevQualityRef = useRef<QualityOption | null>(null);
+  const isInitialMount = useRef(true);
 
+  // Initial video load
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isInitialMount.current) return;
+    
+    isInitialMount.current = false;
+    prevServerRef.current = currentServer;
+    prevQualityRef.current = currentQuality;
+    
+    const initialUrl = getCurrentVideoUrl();
+    video.src = initialUrl;
+    video.load();
+  }, []);
+
+  // Handle quality/server changes (not initial mount)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
+    
+    // Skip if this is initial mount or no change
+    if (isInitialMount.current) return;
     if (prevServerRef.current === currentServer && prevQualityRef.current === currentQuality) {
       return;
     }
@@ -350,7 +368,7 @@ const SubtitleVideoPlayer = ({
     const newUrl = getCurrentVideoUrl();
     video.src = newUrl;
     
-    video.onloadeddata = () => {
+    const handleLoaded = () => {
       video.currentTime = currentPos;
       setIsBuffering(false);
       if (wasPlaying) {
@@ -359,15 +377,24 @@ const SubtitleVideoPlayer = ({
           setIsBuffering(false);
         });
       }
+      video.removeEventListener("loadeddata", handleLoaded);
     };
     
-    video.onerror = () => {
+    const handleError = () => {
       console.error("Video load error");
       setIsBuffering(false);
       toast.error("Hiba a videó betöltésekor. Próbálj másik minőséget.");
+      video.removeEventListener("error", handleError);
     };
     
+    video.addEventListener("loadeddata", handleLoaded);
+    video.addEventListener("error", handleError);
     video.load();
+    
+    return () => {
+      video.removeEventListener("loadeddata", handleLoaded);
+      video.removeEventListener("error", handleError);
+    };
   }, [currentServer, currentQuality, getCurrentVideoUrl]);
 
   const handleMouseMove = () => {
@@ -659,10 +686,11 @@ const SubtitleVideoPlayer = ({
         <video
           ref={videoRef}
           className="w-full h-full object-contain"
-          src={getCurrentVideoUrl()}
           poster={posterUrl}
           onClick={togglePlay}
           crossOrigin="anonymous"
+          playsInline
+          preload="auto"
         >
           <track
             ref={trackRef}
