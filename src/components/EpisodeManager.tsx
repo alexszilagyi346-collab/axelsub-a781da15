@@ -41,7 +41,10 @@ interface EpisodeFormData {
   quality_1080p: string;
   subtitle_url: string;
   subtitle_type: string;
+  player_type: "player1" | "player2";
 }
+
+type SubtitleFormat = "ass" | "srt" | "vtt";
 
 interface EpisodeManagerProps {
   animeId: string;
@@ -63,7 +66,17 @@ const getEmptyFormData = (episodeNumber: number = 1): EpisodeFormData => ({
   quality_1080p: "",
   subtitle_url: "",
   subtitle_type: "embedded",
+  player_type: "player1",
 });
+
+const detectSubtitleFormat = (url: string): SubtitleFormat | null => {
+  if (!url) return null;
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.endsWith('.ass')) return 'ass';
+  if (lowerUrl.endsWith('.srt')) return 'srt';
+  if (lowerUrl.endsWith('.vtt')) return 'vtt';
+  return null;
+};
 
 const episodeToFormData = (episode: Episode): EpisodeFormData => ({
   episode_number: episode.episode_number,
@@ -79,6 +92,7 @@ const episodeToFormData = (episode: Episode): EpisodeFormData => ({
   quality_1080p: episode.quality_1080p || "",
   subtitle_url: episode.subtitle_url || "",
   subtitle_type: episode.subtitle_type || "embedded",
+  player_type: episode.subtitle_type === "external" ? "player2" : "player1",
 });
 
 const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) => {
@@ -414,33 +428,84 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
               <p className="text-xs text-muted-foreground">Formátum: mm:ss vagy hh:mm:ss</p>
             </div>
 
-            {/* Subtitle Settings */}
-            <div className="space-y-2">
-              <Label className="text-primary">Felirat beállítások</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Felirat URL (.ass/.srt)</Label>
-                  <Input
-                    type="url"
-                    value={data.subtitle_url}
-                    onChange={(e) => setData({ ...data, subtitle_url: e.target.value })}
-                    placeholder="https://example.com/sub.ass"
-                    className="bg-background text-sm"
-                  />
+            {/* Player Type Selector */}
+            <div className="space-y-3">
+              <Label className="text-primary">Lejátszó típus</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  onClick={() => setData({ ...data, player_type: "player1", subtitle_type: "embedded" })}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    data.player_type === "player1"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      data.player_type === "player1" ? "border-primary" : "border-muted-foreground"
+                    }`}>
+                      {data.player_type === "player1" && (
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <span className="font-semibold text-foreground">1-es Lejátszó</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Beégetett/normál feliratokhoz. Standard lejátszó beágyazott felirattal.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Felirat típus</Label>
-                  <select
-                    value={data.subtitle_type}
-                    onChange={(e) => setData({ ...data, subtitle_type: e.target.value })}
-                    className="w-full h-10 px-3 rounded-md bg-background border border-input text-sm"
-                  >
-                    <option value="embedded">Beágyazott</option>
-                    <option value="external">Külső</option>
-                  </select>
+                <div
+                  onClick={() => setData({ ...data, player_type: "player2", subtitle_type: "external" })}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    data.player_type === "player2"
+                      ? "border-cyan-500 bg-cyan-500/10"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      data.player_type === "player2" ? "border-cyan-500" : "border-muted-foreground"
+                    }`}>
+                      {data.player_type === "player2" && (
+                        <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                      )}
+                    </div>
+                    <span className="font-semibold text-foreground">2-es Lejátszó</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Külső feliratokhoz (ASS/SRT/VTT). MKV és speciális formátumok.
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* Subtitle Settings - Only show for Player 2 */}
+            {data.player_type === "player2" && (
+              <div className="space-y-2 p-4 rounded-lg border border-cyan-500/30 bg-cyan-500/5">
+                <Label className="text-cyan-400">Külső felirat beállítások</Label>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Felirat URL (.ass/.srt/.vtt)</Label>
+                    <Input
+                      type="url"
+                      value={data.subtitle_url}
+                      onChange={(e) => setData({ ...data, subtitle_url: e.target.value })}
+                      placeholder="https://example.com/subtitle.ass"
+                      className="bg-background text-sm"
+                    />
+                    {data.subtitle_url && (
+                      <p className="text-xs text-cyan-400">
+                        Formátum: {detectSubtitleFormat(data.subtitle_url)?.toUpperCase() || "Ismeretlen"}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    A 2-es lejátszó automatikusan betölti és megjeleníti a feliratot. 
+                    Támogatott formátumok: ASS, SRT, VTT.
+                  </p>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
