@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useUpdateProgress, useEpisodeProgress } from "@/hooks/useWatchHistory";
+import { useAuth } from "@/hooks/useAuth";
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -37,6 +39,9 @@ interface VideoPlayerProps {
   hasNextEpisode?: boolean;
   onNextEpisode?: () => void;
   nextEpisodeTitle?: string;
+  // Watch history props
+  animeId?: string;
+  episodeId?: string;
 }
 
 type QualityOption = "auto" | "1080p" | "720p" | "480p" | "360p";
@@ -72,10 +77,19 @@ const VideoPlayer = ({
   subtitleUrl,
   hasNextEpisode,
   onNextEpisode,
-  nextEpisodeTitle
+  nextEpisodeTitle,
+  animeId,
+  episodeId
 }: VideoPlayerProps) => {
+  const { user } = useAuth();
+  const updateProgress = useUpdateProgress();
+  const { data: savedProgress } = useEpisodeProgress(episodeId);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastSaveTimeRef = useRef(0);
+  const hasRestoredPosition = useRef(false);
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -101,6 +115,63 @@ const VideoPlayer = ({
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState(10);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const countdownIntervalRef = useRef<NodeJS.Timeout>();
+
+  // Save progress function
+  const saveCurrentProgress = useCallback((completed = false) => {
+    if (!videoRef.current || !animeId || !episodeId || !user) return;
+    
+    const currentPos = videoRef.current.currentTime;
+    const videoDuration = videoRef.current.duration;
+    
+    // Only save if position changed significantly
+    if (Math.abs(currentPos - lastSaveTimeRef.current) < 5 && !completed) return;
+    
+    const isCompleted = completed || currentPos >= videoDuration - 30;
+    
+    updateProgress.mutate({
+      animeId,
+      episodeId,
+      progressSeconds: Math.floor(currentPos),
+      durationSeconds: Math.floor(videoDuration),
+      completed: isCompleted,
+    });
+    
+    lastSaveTimeRef.current = currentPos;
+  }, [animeId, episodeId, user, updateProgress]);
+
+  // Restore saved position when video is ready
+  useEffect(() => {
+    if (savedProgress && videoRef.current && !hasRestoredPosition.current) {
+      const video = videoRef.current;
+      const handleCanPlay = () => {
+        if (!hasRestoredPosition.current && savedProgress.progress_seconds > 0) {
+          video.currentTime = savedProgress.progress_seconds;
+          hasRestoredPosition.current = true;
+        }
+      };
+      video.addEventListener("canplay", handleCanPlay, { once: true });
+      return () => video.removeEventListener("canplay", handleCanPlay);
+    }
+  }, [savedProgress]);
+
+  // Auto-save progress every 30 seconds
+  useEffect(() => {
+    if (!animeId || !episodeId || !user) return;
+    
+    const interval = setInterval(() => {
+      if (isPlaying) {
+        saveCurrentProgress();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [animeId, episodeId, user, isPlaying, saveCurrentProgress]);
+
+  // Save on pause and close
+  const handleClose = () => {
+    saveCurrentProgress();
+    onClose();
+  };
 
   // Parse timestamps
   const opStartSec = parseTimeToSeconds(opStart);
@@ -168,9 +239,13 @@ const VideoPlayer = ({
       setIsPlaying(true);
       setIsBuffering(false);
     };
-    const handlePause = () => setIsPlaying(false);
+    const handlePause = () => {
+      setIsPlaying(false);
+      saveCurrentProgress();
+    };
     const handleEnded = () => {
       setIsPlaying(false);
+      saveCurrentProgress(true);
       // Show next episode panel if available
       if (hasNextEpisode && onNextEpisode) {
         setShowNextEpisode(true);
@@ -199,7 +274,7 @@ const VideoPlayer = ({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped, hasNextEpisode, onNextEpisode]);
+  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped, hasNextEpisode, onNextEpisode, saveCurrentProgress]);
 
   // Next episode countdown effect
   useEffect(() => {
@@ -379,7 +454,7 @@ const VideoPlayer = ({
             variant="ghost"
             size="icon"
             className="h-12 w-12 rounded-full bg-black/50 text-white hover:bg-primary hover:text-primary-foreground backdrop-blur-sm"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <X className="h-6 w-6" />
           </Button>
@@ -500,7 +575,7 @@ const VideoPlayer = ({
                       className="flex-1"
                       onClick={() => {
                         setShowNextEpisode(false);
-                        onClose();
+                        handleClose();
                       }}
                     >
                       Bezárás

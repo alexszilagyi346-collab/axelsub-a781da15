@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, Heart, History } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,12 +104,21 @@ const Header = () => {
                       )}
                     </div>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="h-4 w-4 mr-2" />
+                      Profil
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/history")}>
+                      <History className="h-4 w-4 mr-2" />
+                      Előzmények
+                    </DropdownMenuItem>
                     {isAdmin && (
                       <DropdownMenuItem onClick={() => navigate("/admin")}>
                         <Settings className="h-4 w-4 mr-2" />
                         Admin Panel
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                       <LogOut className="h-4 w-4 mr-2" />
                       Kijelentkezés
