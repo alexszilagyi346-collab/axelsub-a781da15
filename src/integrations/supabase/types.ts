@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      anime_subscriptions: {
+        Row: {
+          anime_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          anime_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          anime_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anime_subscriptions_anime_id_fkey"
+            columns: ["anime_id"]
+            isOneToOne: false
+            referencedRelation: "animes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       animes: {
         Row: {
           created_at: string | null
@@ -207,6 +236,70 @@ export type Database = {
             columns: ["anime_id"]
             isOneToOne: false
             referencedRelation: "animes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          related_anime_id: string | null
+          related_comment_id: string | null
+          related_episode_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          related_anime_id?: string | null
+          related_comment_id?: string | null
+          related_episode_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          related_anime_id?: string | null
+          related_comment_id?: string | null
+          related_episode_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_anime_id_fkey"
+            columns: ["related_anime_id"]
+            isOneToOne: false
+            referencedRelation: "animes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_comment_id_fkey"
+            columns: ["related_comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_episode_id_fkey"
+            columns: ["related_episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
             referencedColumns: ["id"]
           },
         ]
