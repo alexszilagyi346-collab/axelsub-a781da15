@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import AnimeDetail from "./pages/AnimeDetail";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
+import History from "./pages/History";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
           <Route path="/anime/:id" element={<ProtectedRoute><AnimeDetail /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
