@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useUpdateProgress, useEpisodeProgress } from "@/hooks/useWatchHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface SubtitleVideoPlayerProps {
   videoUrl: string;
@@ -42,7 +43,7 @@ interface SubtitleVideoPlayerProps {
   episodeId?: string;
 }
 
-type QualityOption = "auto" | "1080p" | "720p" | "480p" | "360p";
+type QualityOption = "1080p" | "720p" | "480p" | "360p";
 type ServerOption = "primary" | "backup";
 type SubtitleSize = "small" | "medium" | "large" | "xlarge";
 
@@ -114,7 +115,7 @@ const SubtitleVideoPlayer = ({
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   const [currentServer, setCurrentServer] = useState<ServerOption>("primary");
-  const [currentQuality, setCurrentQuality] = useState<QualityOption>("auto");
+  const [currentQuality, setCurrentQuality] = useState<QualityOption>("1080p");
   const [subtitleSize, setSubtitleSize] = useState<SubtitleSize>("medium");
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showServerMenu, setShowServerMenu] = useState(false);
@@ -210,18 +211,31 @@ const SubtitleVideoPlayer = ({
   const getCurrentVideoUrl = useCallback(() => {
     const baseUrl = currentServer === "backup" && backupVideoUrl ? backupVideoUrl : videoUrl;
 
-    if (currentQuality === "auto" || currentQuality === "1080p") return baseUrl;
-    if (currentQuality === "720p" && quality720p) return quality720p;
-    if (currentQuality === "480p" && quality480p) return quality480p;
-    if (currentQuality === "360p" && quality360p) return quality360p;
+    // Use specific quality URL if available, otherwise fall back to base URL
+    switch (currentQuality) {
+      case "1080p":
+        return quality1080p || baseUrl;
+      case "720p":
+        return quality720p || baseUrl;
+      case "480p":
+        return quality480p || baseUrl;
+      case "360p":
+        return quality360p || baseUrl;
+      default:
+        return baseUrl;
+    }
+  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality360p, quality480p, quality720p, quality1080p]);
 
-    return baseUrl;
-  }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality360p, quality480p, quality720p]);
-
-  const availableQualities: QualityOption[] = ["auto", "1080p"];
-  if (quality720p) availableQualities.push("720p");
-  if (quality480p) availableQualities.push("480p");
-  if (quality360p) availableQualities.push("360p");
+  // All quality options are always available
+  const availableQualities: QualityOption[] = ["1080p", "720p", "480p", "360p"];
+  
+  // Track which qualities have dedicated URLs
+  const qualityHasUrl: Record<QualityOption, boolean> = {
+    "1080p": !!quality1080p,
+    "720p": !!quality720p,
+    "480p": !!quality480p,
+    "360p": !!quality360p,
+  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -330,13 +344,30 @@ const SubtitleVideoPlayer = ({
 
     const currentPos = video.currentTime;
     const wasPlaying = !video.paused;
-
-    video.src = getCurrentVideoUrl();
-    video.currentTime = currentPos;
-
-    if (wasPlaying) {
-      video.play().catch(() => {});
-    }
+    
+    setIsBuffering(true);
+    
+    const newUrl = getCurrentVideoUrl();
+    video.src = newUrl;
+    
+    video.onloadeddata = () => {
+      video.currentTime = currentPos;
+      setIsBuffering(false);
+      if (wasPlaying) {
+        video.play().catch((err) => {
+          console.error("Play error after quality change:", err);
+          setIsBuffering(false);
+        });
+      }
+    };
+    
+    video.onerror = () => {
+      console.error("Video load error");
+      setIsBuffering(false);
+      toast.error("Hiba a videó betöltésekor. Próbálj másik minőséget.");
+    };
+    
+    video.load();
   }, [currentServer, currentQuality, getCurrentVideoUrl]);
 
   const handleMouseMove = () => {
@@ -883,7 +914,10 @@ const SubtitleVideoPlayer = ({
                             onClick={() => setCurrentQuality(quality)}
                           >
                             {currentQuality === quality && <span className="w-2 h-2 rounded-full bg-primary" />}
-                            {quality === "auto" ? "Automatikus" : quality}
+                            <span>{quality}</span>
+                            {!qualityHasUrl[quality] && (
+                              <span className="text-xs text-muted-foreground ml-auto">(alap)</span>
+                            )}
                           </button>
                         ))}
 
