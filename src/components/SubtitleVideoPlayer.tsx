@@ -47,10 +47,10 @@ type ServerOption = "primary" | "backup";
 type SubtitleSize = "small" | "medium" | "large" | "xlarge";
 
 const subtitleSizes: Record<SubtitleSize, string> = {
-  small: "1rem",
-  medium: "1.5rem",
-  large: "2rem",
-  xlarge: "2.5rem",
+  small: "3vh",
+  medium: "4.5vh",
+  large: "6vh",
+  xlarge: "7.5vh",
 };
 
 const subtitleSizeLabels: Record<SubtitleSize, string> = {
@@ -437,7 +437,7 @@ const SubtitleVideoPlayer = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black"
+        className="fixed inset-0 z-50 bg-black subtitle-video-player"
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onClick={() => {
@@ -445,14 +445,40 @@ const SubtitleVideoPlayer = ({
           setShowServerMenu(false);
         }}
       >
-        {/* Subtitle size style */}
+        {/* Subtitle "burned-in" effect style */}
         <style>{`
           video::cue {
+            font-family: Arial, Helvetica, sans-serif;
             font-size: ${subtitleSizes[subtitleSize]};
-            background-color: rgba(0, 0, 0, 0.8);
-            padding: 0.5em 1em;
-            border-radius: 4px;
-            line-height: 1.4;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: transparent;
+            text-shadow: 
+              -2px -2px 0 #000,
+              2px -2px 0 #000,
+              -2px 2px 0 #000,
+              2px 2px 0 #000,
+              -2px 0 0 #000,
+              2px 0 0 #000,
+              0 -2px 0 #000,
+              0 2px 0 #000,
+              -1px -1px 2px rgba(0,0,0,0.8),
+              1px -1px 2px rgba(0,0,0,0.8),
+              -1px 1px 2px rgba(0,0,0,0.8),
+              1px 1px 2px rgba(0,0,0,0.8);
+            -webkit-text-stroke: 1.5px #000;
+            paint-order: stroke fill;
+            padding: 0;
+            line-height: 1.3;
+          }
+          
+          video::-webkit-media-text-track-container {
+            overflow: visible !important;
+            transform: translateY(-10%) !important;
+          }
+          
+          video::-webkit-media-text-track-display {
+            overflow: visible !important;
           }
         `}</style>
 
