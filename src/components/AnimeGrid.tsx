@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import AnimeCard from "./AnimeCard";
 import { useLatestAnimes } from "@/hooks/useAnimes";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,8 +12,14 @@ const AnimeGrid = () => {
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Sparkles className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold text-foreground">Legfrissebbek</h2>
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h2
+            className="text-2xl font-bold text-foreground"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Legfrissebbek
+          </h2>
+          <div className="flex-1 h-px bg-gradient-to-r from-primary/30 to-transparent ml-4" />
         </div>
 
         {/* Grid */}
@@ -20,24 +27,27 @@ const AnimeGrid = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="aspect-[3/4]">
-                <Skeleton className="w-full h-full rounded-lg" />
+                <Skeleton className="w-full h-full rounded-xl skeleton-shimmer" />
               </div>
             ))}
           </div>
         ) : animes && animes.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {animes.map((anime) => (
-              <AnimeCard key={anime.id} anime={anime} />
+            {animes.map((anime, index) => (
+              <motion.div
+                key={anime.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <AnimeCard anime={anime} />
+              </motion.div>
             ))}
           </div>
         ) : (
           <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">
-              Még nincsenek animék az adatbázisban.
-            </p>
-            <p className="text-muted-foreground text-sm mt-2">
-              Adj hozzá animéket a Cloud-on keresztül.
-            </p>
+            <p className="text-muted-foreground text-lg">Még nincsenek animék az adatbázisban.</p>
+            <p className="text-muted-foreground text-sm mt-2">Adj hozzá animéket a Cloud-on keresztül.</p>
           </div>
         )}
       </div>

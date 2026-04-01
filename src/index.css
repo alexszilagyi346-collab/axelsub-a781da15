@@ -1,45 +1,46 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-AxelSub Anime Portal - Sötét téma lila kiemelővel
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 100%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 100%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 271 91% 65%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 60%;
 
-    --accent: 271 91% 65%;
+    --accent: 280 100% 70%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
     --ring: 271 91% 65%;
 
     --radius: 0.75rem;
+
+    /* Neon glow tokens */
+    --neon-primary: 271 91% 65%;
+    --neon-accent: 280 100% 70%;
+    --neon-cyan: 185 100% 60%;
+    --neon-pink: 330 100% 65%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -52,34 +53,25 @@ AxelSub Anime Portal - Sötét téma lila kiemelővel
   }
 
   .dark {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 100%;
-
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 100%;
-
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
     --primary: 271 91% 65%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-
-    --accent: 271 91% 65%;
+    --secondary: 240 10% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 5% 60%;
+    --accent: 280 100% 70%;
     --accent-foreground: 0 0% 100%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
+    --border: 240 10% 14%;
+    --input: 240 10% 14%;
     --ring: 271 91% 65%;
-
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -97,66 +89,161 @@ AxelSub Anime Portal - Sötét téma lila kiemelővel
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
   }
 }
 
-/* Anime Card Glow Effect */
+/* ======= GLASSMORPHISM ======= */
+.glass {
+  background: hsl(240 10% 8% / 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsl(240 10% 20% / 0.3);
+}
+
+.glass-card {
+  background: hsl(240 10% 8% / 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(240 10% 20% / 0.2);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: hsl(240 10% 10% / 0.6);
+  border-color: hsl(271 91% 65% / 0.4);
+  box-shadow:
+    0 0 20px 2px hsl(271 91% 65% / 0.15),
+    0 8px 32px -8px hsl(0 0% 0% / 0.5);
+}
+
+/* ======= NEON GLOW EFFECTS ======= */
+.neon-glow {
+  box-shadow:
+    0 0 10px hsl(271 91% 65% / 0.3),
+    0 0 30px hsl(271 91% 65% / 0.15),
+    0 0 60px hsl(271 91% 65% / 0.05);
+}
+
+.neon-text {
+  text-shadow:
+    0 0 10px hsl(271 91% 65% / 0.5),
+    0 0 20px hsl(271 91% 65% / 0.3),
+    0 0 40px hsl(271 91% 65% / 0.15);
+}
+
+.neon-border {
+  border-color: hsl(271 91% 65% / 0.5);
+  box-shadow:
+    inset 0 0 10px hsl(271 91% 65% / 0.05),
+    0 0 10px hsl(271 91% 65% / 0.15);
+}
+
+/* ======= ANIME CARD ======= */
 .anime-card-glow {
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .anime-card-glow:hover {
-  box-shadow: 0 0 20px 2px hsl(271 91% 65% / 0.4);
-  border-color: hsl(271 91% 65%);
-  transform: scale(1.02);
+  box-shadow:
+    0 0 20px 2px hsl(271 91% 65% / 0.3),
+    0 20px 40px -15px hsl(0 0% 0% / 0.5);
+  border-color: hsl(271 91% 65% / 0.5);
+  transform: translateY(-4px) scale(1.02);
 }
 
-/* Image zoom on hover */
 .anime-thumbnail {
-  transition: transform 0.3s ease;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.anime-thumbnail:hover {
-  transform: scale(1.05);
+.anime-card-glow:hover .anime-thumbnail {
+  transform: scale(1.1);
 }
 
-/* Gradient overlay for text */
+/* ======= GRADIENT OVERLAYS ======= */
 .gradient-overlay {
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+  background: linear-gradient(to top, hsl(240 10% 4% / 0.95) 0%, hsl(240 10% 4% / 0.5) 50%, transparent 100%);
 }
 
-/* Hero gradient */
 .hero-gradient {
-  background: linear-gradient(to right, rgba(15, 15, 15, 1) 0%, rgba(15, 15, 15, 0.8) 40%, rgba(15, 15, 15, 0.4) 70%, transparent 100%);
+  background: linear-gradient(
+    to right,
+    hsl(240 10% 4%) 0%,
+    hsl(240 10% 4% / 0.85) 35%,
+    hsl(240 10% 4% / 0.4) 65%,
+    transparent 100%
+  );
 }
 
-/* Scrollbar styling */
+/* ======= SCROLLBAR ======= */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(0 0% 10%);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(271 91% 65% / 0.5);
-  border-radius: 4px;
+  background: hsl(271 91% 65% / 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(271 91% 65% / 0.7);
+  background: hsl(271 91% 65% / 0.6);
 }
 
-/* Subtitle Video Player - Burned-in effect for external subtitles */
+/* ======= ANIMATED GRADIENT MESH BG ======= */
+.mesh-gradient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, hsl(271 91% 65% / 0.06), transparent 50%),
+    radial-gradient(ellipse 60% 80% at 90% 80%, hsl(280 100% 70% / 0.04), transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, hsl(185 100% 60% / 0.02), transparent 60%);
+}
+
+/* ======= FLOATING PARTICLES ======= */
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(50px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1;
+  animation: float-particle linear infinite;
+}
+
+/* ======= SECTION DIVIDER GLOW ======= */
+.section-glow-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(271 91% 65% / 0.3), hsl(280 100% 70% / 0.2), transparent);
+}
+
+/* ======= SUBTITLE PLAYER ======= */
 .subtitle-video-player video::cue {
   font-family: Arial, Helvetica, sans-serif !important;
   font-weight: bold;
   color: #ffffff;
   background-color: transparent !important;
-  text-shadow: 
+  text-shadow:
     -2px -2px 0 #000,
     2px -2px 0 #000,
     -2px 2px 0 #000,
@@ -169,7 +256,6 @@ AxelSub Anime Portal - Sötét téma lila kiemelővel
   paint-order: stroke fill;
 }
 
-/* Prevent subtitle cutoff */
 .subtitle-video-player video::-webkit-media-text-track-container {
   overflow: visible !important;
   transform: translateY(-10%) !important;
@@ -177,4 +263,21 @@ AxelSub Anime Portal - Sötét téma lila kiemelővel
 
 .subtitle-video-player video::-webkit-media-text-track-display {
   overflow: visible !important;
+}
+
+/* ======= SKELETON SHIMMER ======= */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(240 10% 10%) 25%,
+    hsl(240 10% 16%) 50%,
+    hsl(240 10% 10%) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
