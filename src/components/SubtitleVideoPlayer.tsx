@@ -46,6 +46,7 @@ interface SubtitleVideoPlayerProps {
 type QualityOption = "1080p" | "720p" | "480p" | "360p";
 type ServerOption = "primary" | "backup";
 type SubtitleSize = "small" | "medium" | "large" | "xlarge";
+type SubtitleFormat = "vtt" | "srt" | "ass" | "unknown";
 
 const subtitleSizes: Record<SubtitleSize, string> = {
   small: "3vh",
@@ -71,6 +72,128 @@ const parseTimeToSeconds = (timeStr: string | undefined): number | null => {
     return parts[0] * 3600 + parts[1] * 60 + parts[2];
   }
   return null;
+};
+
+const getSubtitleFormat = (url: string): SubtitleFormat => {
+  const normalizedUrl = url.split("?")[0]?.split("#")[0]?.toLowerCase() ?? "";
+
+  if (normalizedUrl.endsWith(".vtt")) return "vtt";
+  if (normalizedUrl.endsWith(".srt")) return "srt";
+  if (normalizedUrl.endsWith(".ass")) return "ass";
+
+  return "unknown";
+};
+
+const toVttTimestamp = (value: string) => {
+  const normalizedValue = value.trim().replace(",", ".");
+  const [timePart, millisecondsPart = "000"] = normalizedValue.split(".");
+  const timeSegments = timePart.split(":").map((segment) => segment.trim().padStart(2, "0"));
+
+  const safeTime = timeSegments.length === 3
+    ? timeSegments.join(":")
+    : `00:${timeSegments.join(":")}`;
+
+  return `${safeTime}.${millisecondsPart.padEnd(3, "0").slice(0, 3)}`;
+};
+
+const cleanAssText = (text: string) =>
+  text
+    .replace(/\{[^}]*\}/g, "")
+    .replace(/\\N/gi, "\n")
+    .replace(/\\n/gi, "\n")
+    .replace(/\\h/gi, " ")
+    .trim();
+
+const convertSrtToVtt = (content: string) => {
+  const blocks = content
+    .replace(/^\uFEFF/, "")
+    .replace(/\r/g, "")
+    .trim()
+    .split(/\n{2,}/);
+
+  const cues = blocks
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trimEnd())
+        .filter(Boolean);
+
+      if (!lines.length) return null;
+
+      const timeLineIndex = lines[0].includes("-->") ? 0 : 1;
+      const timeLine = lines[timeLineIndex];
+
+      if (!timeLine || !timeLine.includes("-->")) return null;
+
+      const [start, end] = timeLine.split("-->").map((part) => toVttTimestamp(part.trim()));
+      const text = lines.slice(timeLineIndex + 1).join("\n").trim();
+
+      if (!text) return null;
+
+      return `${start} --> ${end}\n${text}`;
+    })
+    .filter((cue): cue is string => Boolean(cue));
+
+  return `WEBVTT\n\n${cues.join("\n\n")}`;
+};
+
+const convertAssTimeToVtt = (value: string) => {
+  const [hours = "0", minutes = "0", secondsPart = "0"] = value.trim().split(":");
+  const [seconds = "0", centiseconds = "0"] = secondsPart.split(".");
+
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:${seconds.padStart(2, "0")}.${centiseconds.padEnd(2, "0").slice(0, 2)}0`;
+};
+
+const convertAssToVtt = (content: string) => {
+  const lines = content.replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n");
+  const cues: string[] = [];
+  let inEventsSection = false;
+  let formatColumns: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    if (line.startsWith("[")) {
+      inEventsSection = line.toLowerCase() === "[events]";
+      continue;
+    }
+
+    if (!inEventsSection) continue;
+
+    if (line.startsWith("Format:")) {
+      formatColumns = line
+        .replace("Format:", "")
+        .split(",")
+        .map((column) => column.trim().toLowerCase());
+      continue;
+    }
+
+    if (!line.startsWith("Dialogue:")) continue;
+
+    const payload = line.replace("Dialogue:", "").trim();
+    const fieldCount = formatColumns.length || 10;
+    const parts = payload.split(",");
+
+    if (parts.length < fieldCount) continue;
+
+    const values = parts.slice(0, fieldCount - 1);
+    values.push(parts.slice(fieldCount - 1).join(","));
+
+    const startIndex = formatColumns.indexOf("start");
+    const endIndex = formatColumns.indexOf("end");
+    const textIndex = formatColumns.indexOf("text");
+
+    const start = values[startIndex === -1 ? 1 : startIndex];
+    const end = values[endIndex === -1 ? 2 : endIndex];
+    const text = cleanAssText(values[textIndex === -1 ? values.length - 1 : textIndex] ?? "");
+
+    if (!start || !end || !text) continue;
+
+    cues.push(`${convertAssTimeToVtt(start)} --> ${convertAssTimeToVtt(end)}\n${text}`);
+  }
+
+  return `WEBVTT\n\n${cues.join("\n\n")}`;
 };
 
 const SubtitleVideoPlayer = ({
@@ -101,6 +224,7 @@ const SubtitleVideoPlayer = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLTrackElement>(null);
+  const subtitleObjectUrlRef = useRef<string | null>(null);
   const lastSaveTimeRef = useRef(0);
   const hasRestoredPosition = useRef(false);
 
@@ -127,6 +251,7 @@ const SubtitleVideoPlayer = ({
   const [showNextEpisode, setShowNextEpisode] = useState(false);
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState(10);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
+  const [resolvedSubtitleUrl, setResolvedSubtitleUrl] = useState<string | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout>();
 
   // Parse timestamps
@@ -160,9 +285,70 @@ const SubtitleVideoPlayer = ({
     [animeId, episodeId, user, updateProgress]
   );
 
-  // Enable subtitle track by default
+  // Prepare subtitle source (ASS/SRT -> VTT) and clean up object URLs
+  useEffect(() => {
+    let isCancelled = false;
+
+    const cleanupObjectUrl = () => {
+      if (subtitleObjectUrlRef.current) {
+        URL.revokeObjectURL(subtitleObjectUrlRef.current);
+        subtitleObjectUrlRef.current = null;
+      }
+    };
+
+    const prepareSubtitleSource = async () => {
+      cleanupObjectUrl();
+
+      if (!subtitleUrl) {
+        setResolvedSubtitleUrl(null);
+        return;
+      }
+
+      const format = getSubtitleFormat(subtitleUrl);
+
+      if (format === "vtt" || format === "unknown") {
+        setResolvedSubtitleUrl(subtitleUrl);
+        return;
+      }
+
+      try {
+        const response = await fetch(subtitleUrl);
+
+        if (!response.ok) {
+          throw new Error(`Subtitle fetch failed: ${response.status}`);
+        }
+
+        const subtitleContent = await response.text();
+        if (isCancelled) return;
+
+        const vttContent = format === "srt"
+          ? convertSrtToVtt(subtitleContent)
+          : convertAssToVtt(subtitleContent);
+
+        const objectUrl = URL.createObjectURL(new Blob([vttContent], { type: "text/vtt" }));
+        subtitleObjectUrlRef.current = objectUrl;
+        setResolvedSubtitleUrl(objectUrl);
+      } catch (error) {
+        console.error("Subtitle preparation error:", error);
+        if (!isCancelled) {
+          setResolvedSubtitleUrl(null);
+          toast.error("A felirat nem tölthető be ebben a formátumban.");
+        }
+      }
+    };
+
+    prepareSubtitleSource();
+
+    return () => {
+      isCancelled = true;
+      cleanupObjectUrl();
+    };
+  }, [subtitleUrl]);
+
+  // Enable subtitle track by default whenever the track changes
   useEffect(() => {
     const video = videoRef.current;
+    const track = trackRef.current;
     if (!video) return;
 
     const enableSubtitles = () => {
@@ -171,9 +357,15 @@ const SubtitleVideoPlayer = ({
       }
     };
 
+    enableSubtitles();
     video.addEventListener("loadedmetadata", enableSubtitles);
-    return () => video.removeEventListener("loadedmetadata", enableSubtitles);
-  }, []);
+    track?.addEventListener("load", enableSubtitles);
+
+    return () => {
+      video.removeEventListener("loadedmetadata", enableSubtitles);
+      track?.removeEventListener("load", enableSubtitles);
+    };
+  }, [resolvedSubtitleUrl]);
 
   // Restore saved position
   useEffect(() => {
@@ -330,44 +522,72 @@ const SubtitleVideoPlayer = ({
 
   const prevServerRef = useRef<ServerOption | null>(null);
   const prevQualityRef = useRef<QualityOption | null>(null);
+  const prevSourceUrlRef = useRef<string | null>(null);
   const isInitialMount = useRef(true);
 
   // Initial video load
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !isInitialMount.current) return;
-    
+
     isInitialMount.current = false;
     prevServerRef.current = currentServer;
     prevQualityRef.current = currentQuality;
-    
+
     const initialUrl = getCurrentVideoUrl();
+    prevSourceUrlRef.current = initialUrl;
+
+    const handleInitialLoaded = () => {
+      setIsBuffering(false);
+      video.removeEventListener("loadeddata", handleInitialLoaded);
+    };
+
+    const handleInitialError = () => {
+      console.error("Initial video load error");
+      setIsBuffering(false);
+      toast.error("A videó nem tölthető be. Ellenőrizd a linket.");
+      video.removeEventListener("error", handleInitialError);
+    };
+
+    setIsBuffering(true);
+    video.addEventListener("loadeddata", handleInitialLoaded);
+    video.addEventListener("error", handleInitialError);
     video.src = initialUrl;
     video.load();
-  }, []);
+
+    return () => {
+      video.removeEventListener("loadeddata", handleInitialLoaded);
+      video.removeEventListener("error", handleInitialError);
+    };
+  }, [currentQuality, currentServer, getCurrentVideoUrl]);
 
   // Handle quality/server changes (not initial mount)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
+
+    const newUrl = getCurrentVideoUrl();
+
     // Skip if this is initial mount or no change
     if (isInitialMount.current) return;
-    if (prevServerRef.current === currentServer && prevQualityRef.current === currentQuality) {
+    if (
+      prevServerRef.current === currentServer &&
+      prevQualityRef.current === currentQuality &&
+      prevSourceUrlRef.current === newUrl
+    ) {
       return;
     }
 
     prevServerRef.current = currentServer;
     prevQualityRef.current = currentQuality;
+    prevSourceUrlRef.current = newUrl;
 
     const currentPos = video.currentTime;
     const wasPlaying = !video.paused;
-    
+
     setIsBuffering(true);
-    
-    const newUrl = getCurrentVideoUrl();
     video.src = newUrl;
-    
+
     const handleLoaded = () => {
       video.currentTime = currentPos;
       setIsBuffering(false);
@@ -688,18 +908,20 @@ const SubtitleVideoPlayer = ({
           className="w-full h-full object-contain"
           poster={posterUrl}
           onClick={togglePlay}
-          crossOrigin="anonymous"
           playsInline
           preload="auto"
         >
-          <track
-            ref={trackRef}
-            kind="subtitles"
-            src={subtitleUrl}
-            srcLang="hu"
-            label="Magyar"
-            default
-          />
+          {resolvedSubtitleUrl && (
+            <track
+              key={resolvedSubtitleUrl}
+              ref={trackRef}
+              kind="subtitles"
+              src={resolvedSubtitleUrl}
+              srcLang="hu"
+              label="Magyar"
+              default
+            />
+          )}
         </video>
 
         {/* Center Play/Pause Button */}
