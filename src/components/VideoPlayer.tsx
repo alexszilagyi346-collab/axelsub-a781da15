@@ -109,6 +109,8 @@ const VideoPlayer = ({
   const [showEdSkip, setShowEdSkip] = useState(false);
   const [opSkipped, setOpSkipped] = useState(false);
   const [edSkipped, setEdSkipped] = useState(false);
+  const opSkippedRef = useRef(false);
+  const edSkippedRef = useRef(false);
   
   // Next episode states
   const [showNextEpisode, setShowNextEpisode] = useState(false);

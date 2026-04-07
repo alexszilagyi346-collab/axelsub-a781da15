@@ -247,6 +247,8 @@ const SubtitleVideoPlayer = ({
   const [showEdSkip, setShowEdSkip] = useState(false);
   const [opSkipped, setOpSkipped] = useState(false);
   const [edSkipped, setEdSkipped] = useState(false);
+  const opSkippedRef = useRef(false);
+  const edSkippedRef = useRef(false);
 
   const [showNextEpisode, setShowNextEpisode] = useState(false);
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState(10);
