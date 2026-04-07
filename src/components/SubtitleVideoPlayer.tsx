@@ -247,6 +247,8 @@ const SubtitleVideoPlayer = ({
   const [showEdSkip, setShowEdSkip] = useState(false);
   const [opSkipped, setOpSkipped] = useState(false);
   const [edSkipped, setEdSkipped] = useState(false);
+  const opSkippedRef = useRef(false);
+  const edSkippedRef = useRef(false);
 
   const [showNextEpisode, setShowNextEpisode] = useState(false);
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState(10);
@@ -437,11 +439,11 @@ const SubtitleVideoPlayer = ({
       const time = video.currentTime;
       setCurrentTime(time);
 
-      if (opStartSec !== null && opEndSec !== null && !opSkipped) {
+      if (opStartSec !== null && opEndSec !== null && !opSkippedRef.current) {
         setShowOpSkip(time >= opStartSec && time <= opEndSec);
       }
 
-      if (edStartSec !== null && edEndSec !== null && !edSkipped) {
+      if (edStartSec !== null && edEndSec !== null && !edSkippedRef.current) {
         setShowEdSkip(time >= edStartSec && time <= edEndSec);
       }
     };
@@ -488,7 +490,7 @@ const SubtitleVideoPlayer = ({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped, hasNextEpisode, onNextEpisode, saveCurrentProgress]);
+  }, [opStartSec, opEndSec, edStartSec, edEndSec, hasNextEpisode, onNextEpisode, saveCurrentProgress]);
 
   // Next episode countdown
   useEffect(() => {
@@ -690,6 +692,7 @@ const SubtitleVideoPlayer = ({
   const skipOpening = () => {
     if (!videoRef.current || opEndSec === null) return;
     videoRef.current.currentTime = opEndSec;
+    opSkippedRef.current = true;
     setOpSkipped(true);
     setShowOpSkip(false);
   };
@@ -697,6 +700,7 @@ const SubtitleVideoPlayer = ({
   const skipEnding = () => {
     if (!videoRef.current || edEndSec === null) return;
     videoRef.current.currentTime = edEndSec;
+    edSkippedRef.current = true;
     setEdSkipped(true);
     setShowEdSkip(false);
   };
