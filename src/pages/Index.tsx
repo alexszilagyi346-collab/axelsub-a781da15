@@ -11,8 +11,10 @@ const Index = () => {
       <Header />
 
       <main className="pt-16 relative z-10">
-        <ContinueWatching />
         <HeroBanner />
+        
+        {/* Continue watching - above latest */}
+        <ContinueWatching />
         
         {/* Glow divider */}
         <div className="section-glow-divider mx-auto max-w-4xl my-2" />
