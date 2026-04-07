@@ -215,7 +215,7 @@ const VideoPlayer = ({
       setCurrentTime(time);
       
       // OP Skip button visibility
-      if (opStartSec !== null && opEndSec !== null && !opSkipped) {
+      if (opStartSec !== null && opEndSec !== null && !opSkippedRef.current) {
         if (time >= opStartSec && time <= opEndSec) {
           setShowOpSkip(true);
         } else {
@@ -224,7 +224,7 @@ const VideoPlayer = ({
       }
       
       // ED Skip button visibility
-      if (edStartSec !== null && edEndSec !== null && !edSkipped) {
+      if (edStartSec !== null && edEndSec !== null && !edSkippedRef.current) {
         if (time >= edStartSec && time <= edEndSec) {
           setShowEdSkip(true);
         } else {
@@ -413,6 +413,7 @@ const VideoPlayer = ({
   const skipOpening = () => {
     if (!videoRef.current || opEndSec === null) return;
     videoRef.current.currentTime = opEndSec;
+    opSkippedRef.current = true;
     setOpSkipped(true);
     setShowOpSkip(false);
   };
@@ -420,6 +421,7 @@ const VideoPlayer = ({
   const skipEnding = () => {
     if (!videoRef.current || edEndSec === null) return;
     videoRef.current.currentTime = edEndSec;
+    edSkippedRef.current = true;
     setEdSkipped(true);
     setShowEdSkip(false);
   };
