@@ -439,11 +439,11 @@ const SubtitleVideoPlayer = ({
       const time = video.currentTime;
       setCurrentTime(time);
 
-      if (opStartSec !== null && opEndSec !== null && !opSkipped) {
+      if (opStartSec !== null && opEndSec !== null && !opSkippedRef.current) {
         setShowOpSkip(time >= opStartSec && time <= opEndSec);
       }
 
-      if (edStartSec !== null && edEndSec !== null && !edSkipped) {
+      if (edStartSec !== null && edEndSec !== null && !edSkippedRef.current) {
         setShowEdSkip(time >= edStartSec && time <= edEndSec);
       }
     };
@@ -692,6 +692,7 @@ const SubtitleVideoPlayer = ({
   const skipOpening = () => {
     if (!videoRef.current || opEndSec === null) return;
     videoRef.current.currentTime = opEndSec;
+    opSkippedRef.current = true;
     setOpSkipped(true);
     setShowOpSkip(false);
   };
@@ -699,6 +700,7 @@ const SubtitleVideoPlayer = ({
   const skipEnding = () => {
     if (!videoRef.current || edEndSec === null) return;
     videoRef.current.currentTime = edEndSec;
+    edSkippedRef.current = true;
     setEdSkipped(true);
     setShowEdSkip(false);
   };
