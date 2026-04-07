@@ -490,7 +490,7 @@ const SubtitleVideoPlayer = ({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [opStartSec, opEndSec, edStartSec, edEndSec, opSkipped, edSkipped, hasNextEpisode, onNextEpisode, saveCurrentProgress]);
+  }, [opStartSec, opEndSec, edStartSec, edEndSec, hasNextEpisode, onNextEpisode, saveCurrentProgress]);
 
   // Next episode countdown
   useEffect(() => {
