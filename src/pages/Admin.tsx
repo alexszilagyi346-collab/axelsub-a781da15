@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -11,7 +11,10 @@ import {
   Star,
   Edit,
   X,
-  List
+  List,
+  Users,
+  Eye,
+  Film
 } from "lucide-react";
 import EpisodeManager from "@/components/EpisodeManager";
 import Header from "@/components/Header";
@@ -47,8 +50,31 @@ const Admin = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [episodeManagerAnime, setEpisodeManagerAnime] = useState<Anime | null>(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [activeViewers, setActiveViewers] = useState(0);
   
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch admin stats
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchStats = async () => {
+      // Total registered users
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      setTotalUsers(userCount || 0);
+
+      // Active viewers (watched something in last 24h)
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: viewerCount } = await supabase
+        .from("watch_history")
+        .select("user_id", { count: "exact", head: true })
+        .gte("last_watched_at", yesterday);
+      setActiveViewers(viewerCount || 0);
+    };
+    fetchStats();
+  }, [isAdmin]);
 
   // Loading state
   if (authLoading || adminLoading) {
@@ -233,6 +259,37 @@ const Admin = () => {
       
       <main className="pt-24 pb-12">
         <div className="container mx-auto px-4">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
+                <p className="text-sm text-muted-foreground">Regisztrált felhasználó</p>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <Eye className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{activeViewers}</p>
+                <p className="text-sm text-muted-foreground">Aktív néző (24h)</p>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <Film className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{animes?.length || 0}</p>
+                <p className="text-sm text-muted-foreground">Összes anime</p>
+              </div>
+            </div>
+          </div>
+
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
