@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, History } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +35,12 @@ const Header = () => {
   const openSignIn = () => { setAuthMode("signin"); setShowAuthModal(true); };
   const openSignUp = () => { setAuthMode("signup"); setShowAuthModal(true); };
 
+  const animeLinks = [
+    { to: "/browse", label: "Összes", status: "" },
+    { to: "/browse?status=ongoing", label: "Aktív", status: "ongoing" },
+    { to: "/browse?status=completed", label: "Befejezett", status: "completed" },
+  ];
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -52,23 +58,45 @@ const Header = () => {
 
             {/* Navigation - Desktop */}
             <nav className="hidden md:flex items-center gap-1">
-              {[
-                { to: "/", label: "Kezdőlap", active: true },
-                { to: "/browse", label: "Böngészés" },
-                { to: "/public", label: "Publikus" },
-              ].map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    link.active
-                      ? "text-foreground bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-primary/5"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <Link
+                to="/"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-foreground bg-primary/10 transition-all duration-200"
+              >
+                Kezdőlap
+              </Link>
+
+              {/* Animék dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200">
+                    Animék
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-44 glass border-border/50">
+                  {animeLinks.map((link) => (
+                    <DropdownMenuItem
+                      key={link.to}
+                      onClick={() => navigate(link.to)}
+                      className="cursor-pointer"
+                    >
+                      {link.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Hírek */}
+              <Link
+                to="/news"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Newspaper className="h-3.5 w-3.5" />
+                  Hírek
+                </span>
+              </Link>
+
               {isAdmin && (
                 <Link
                   to="/admin"
@@ -151,20 +179,34 @@ const Header = () => {
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
             <nav className="md:hidden pt-4 pb-2 border-t border-border/30 mt-3 space-y-1">
-              {[
-                { to: "/", label: "Kezdőlap" },
-                { to: "/browse", label: "Böngészés" },
-                { to: "/public", label: "Publikus" },
-              ].map((link) => (
+              <Link
+                to="/"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Kezdőlap
+              </Link>
+
+              <p className="px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">Animék</p>
+              {animeLinks.map((link) => (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                  className="block py-2 px-5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
               ))}
+
+              <Link
+                to="/news"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Hírek
+              </Link>
+
               {isAdmin && (
                 <Link
                   to="/admin"
