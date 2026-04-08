@@ -5,6 +5,7 @@ import type { Anime } from "@/types/anime";
 import FavoriteButton from "./FavoriteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useContinueWatching } from "@/hooks/useWatchHistory";
+import { Badge } from "@/components/ui/badge";
 
 interface AnimeCardProps {
   anime: Anime;
@@ -87,6 +88,15 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
             background: "radial-gradient(ellipse at 50% 0%, hsl(271 91% 65% / 0.1), transparent 70%)",
           }}
         />
+
+        {/* New Episodes Badge */}
+        {anime.episodes_count != null && anime.episodes_count > 0 && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-primary text-primary-foreground font-bold text-xs px-2 py-0.5 shadow-lg">
+              {anime.episodes_count} rész
+            </Badge>
+          </div>
+        )}
 
         {/* Favorite Button */}
         {user && (
