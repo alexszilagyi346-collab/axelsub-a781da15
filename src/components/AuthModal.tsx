@@ -202,6 +202,28 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                 </div>
               </div>
 
+              {/* Confirm Password - only for signup */}
+              {mode === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-foreground">
+                    Jelszó megerősítése
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10 bg-background border-border"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Captcha */}
               <div className="space-y-2">
                 <Label className="text-foreground flex items-center gap-2">
