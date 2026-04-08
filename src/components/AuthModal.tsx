@@ -25,6 +25,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
   const [mode, setMode] = useState<"signin" | "signup">(defaultMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -58,22 +59,43 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
       return;
     }
 
+    if (mode === "signup" && password !== confirmPassword) {
+      toast.error("A jelszavak nem egyeznek!");
+      return;
+    }
+
+    if (mode === "signup" && password.length < 6) {
+      toast.error("A jelszónak legalább 6 karakter hosszúnak kell lennie!");
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (mode === "signup") {
         const { error } = await signUp(email, password);
         if (error) {
-          toast.error(error.message);
+          if (error.message.includes("already registered")) {
+            toast.error("Ez az email cím már regisztrálva van! Próbálj bejelentkezni.");
+          } else {
+            toast.error(error.message);
+          }
         } else {
-          toast.success("Sikeres regisztráció! Most már bejelentkezhetsz.");
+          toast.success("Sikeres regisztráció! Ellenőrizd az email fiókodat a megerősítő linkért.", { duration: 6000 });
           setMode("signin");
+          setConfirmPassword("");
           resetCaptcha();
         }
       } else {
         const { error } = await signIn(email, password);
         if (error) {
-          toast.error(error.message);
+          if (error.message.includes("Invalid login credentials")) {
+            toast.error("Hibás email cím vagy jelszó!");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Még nem erősítetted meg az email címedet! Ellenőrizd a postaládádat.", { duration: 6000 });
+          } else {
+            toast.error(error.message);
+          }
         } else {
           if (rememberMe) {
             localStorage.setItem("rememberMe", "true");
@@ -179,6 +201,28 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                   </button>
                 </div>
               </div>
+
+              {/* Confirm Password - only for signup */}
+              {mode === "signup" && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-foreground">
+                    Jelszó megerősítése
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10 bg-background border-border"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Captcha */}
               <div className="space-y-2">

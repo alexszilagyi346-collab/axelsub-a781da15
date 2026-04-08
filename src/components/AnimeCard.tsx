@@ -5,6 +5,7 @@ import type { Anime } from "@/types/anime";
 import FavoriteButton from "./FavoriteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useContinueWatching } from "@/hooks/useWatchHistory";
+import { Badge } from "@/components/ui/badge";
 
 interface AnimeCardProps {
   anime: Anime;
@@ -88,6 +89,15 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
           }}
         />
 
+        {/* New Episodes Badge */}
+        {anime.episodes_count != null && anime.episodes_count > 0 && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-primary text-primary-foreground font-bold text-xs px-2 py-0.5 shadow-lg">
+              {anime.episodes_count} rész
+            </Badge>
+          </div>
+        )}
+
         {/* Favorite Button */}
         {user && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
@@ -110,18 +120,11 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
           <h3 className="text-foreground font-semibold text-sm md:text-base line-clamp-2">
             {anime.title}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
-            {anime.genre && (
-              <span className="text-muted-foreground text-xs">
-                {anime.genre}
-              </span>
-            )}
-            {anime.episodes_count != null && anime.episodes_count > 0 && (
-              <span className="text-xs text-primary font-medium">
-                {anime.episodes_count} rész
-              </span>
-            )}
-          </div>
+          {anime.genre && (
+            <span className="text-muted-foreground text-xs mt-1 block">
+              {anime.genre}
+            </span>
+          )}
         </div>
       </motion.div>
     </Link>
