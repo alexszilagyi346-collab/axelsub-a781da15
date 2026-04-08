@@ -120,18 +120,11 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
           <h3 className="text-foreground font-semibold text-sm md:text-base line-clamp-2">
             {anime.title}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
-            {anime.genre && (
-              <span className="text-muted-foreground text-xs">
-                {anime.genre}
-              </span>
-            )}
-            {anime.episodes_count != null && anime.episodes_count > 0 && (
-              <span className="text-xs text-primary font-medium">
-                {anime.episodes_count} rész
-              </span>
-            )}
-          </div>
+          {anime.genre && (
+            <span className="text-muted-foreground text-xs mt-1 block">
+              {anime.genre}
+            </span>
+          )}
         </div>
       </motion.div>
     </Link>
