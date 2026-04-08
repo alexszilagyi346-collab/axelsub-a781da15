@@ -10,6 +10,7 @@ import AnimeDetail from "./pages/AnimeDetail";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import History from "./pages/History";
+import News from "./pages/News";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+          <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -4,20 +4,26 @@ import { useAnimes } from "@/hooks/useAnimes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AdvancedFilters, { FilterState } from "@/components/AdvancedFilters";
 
 const Browse = () => {
   const { data: animes, isLoading } = useAnimes();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const statusParam = searchParams.get("status");
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterState>({
     genre: "",
     year: "",
-    status: "all",
+    status: statusParam || "all",
     sortBy: "newest",
   });
+
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, status: statusParam || "all" }));
+  }, [statusParam]);
 
   // Extract unique genres from animes
   const genres = useMemo(() => {
