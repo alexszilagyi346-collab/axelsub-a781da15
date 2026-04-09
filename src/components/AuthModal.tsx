@@ -14,7 +14,6 @@ interface AuthModalProps {
   defaultMode?: "signin" | "signup";
 }
 
-// Simple math captcha
 const generateCaptcha = () => {
   const a = Math.floor(Math.random() * 10) + 1;
   const b = Math.floor(Math.random() * 10) + 1;
@@ -51,10 +50,13 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
     setCaptchaVerified(false);
   };
 
+  // Captcha only required for signup
+  const needsCaptcha = mode === "signup";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!captchaVerified) {
+    if (needsCaptcha && !captchaVerified) {
       toast.error("Kérlek, először igazold, hogy nem vagy robot!");
       return;
     }
@@ -92,7 +94,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
           if (error.message.includes("Invalid login credentials")) {
             toast.error("Hibás email cím vagy jelszó!");
           } else if (error.message.includes("Email not confirmed")) {
-            toast.error("Még nem erősítetted meg az email címedet! Ellenőrizd a postaládádat.", { duration: 6000 });
+            toast.error("Még nem erősítetted meg az email címedet! Ellenőrizd a postaládádat (spam mappát is).", { duration: 8000 });
           } else {
             toast.error(error.message);
           }
@@ -130,7 +132,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
             className="relative w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -140,7 +141,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
               <X className="h-5 w-5" />
             </Button>
 
-            {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-foreground">
                 {mode === "signin" ? "Bejelentkezés" : "Regisztráció"}
@@ -152,12 +152,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">
-                  Email cím
-                </Label>
+                <Label htmlFor="email" className="text-foreground">Email cím</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
@@ -173,9 +170,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">
-                  Jelszó
-                </Label>
+                <Label htmlFor="password" className="text-foreground">Jelszó</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
@@ -193,21 +188,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Confirm Password - only for signup */}
               {mode === "signup" && (
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-foreground">
-                    Jelszó megerősítése
-                  </Label>
+                  <Label htmlFor="confirmPassword" className="text-foreground">Jelszó megerősítése</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
@@ -224,46 +212,42 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                 </div>
               )}
 
-              {/* Captcha */}
-              <div className="space-y-2">
-                <Label className="text-foreground flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  Nem vagyok robot
-                </Label>
-                <div className="bg-background border border-border rounded-lg p-4">
-                  {captchaVerified ? (
-                    <div className="flex items-center gap-2 text-green-500">
-                      <ShieldCheck className="h-5 w-5" />
-                      <span className="font-medium">Ellenőrizve!</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-muted-foreground text-sm">
-                        Oldd meg a feladatot: <span className="text-foreground font-bold">{captcha.question}</span>
-                      </p>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          placeholder="Válasz"
-                          value={captchaInput}
-                          onChange={(e) => setCaptchaInput(e.target.value)}
-                          className="bg-card border-border flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={verifyCaptcha}
-                          disabled={!captchaInput}
-                        >
-                          Ellenőrzés
-                        </Button>
+              {/* Captcha - only for signup */}
+              {needsCaptcha && (
+                <div className="space-y-2">
+                  <Label className="text-foreground flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Nem vagyok robot
+                  </Label>
+                  <div className="bg-background border border-border rounded-lg p-4">
+                    {captchaVerified ? (
+                      <div className="flex items-center gap-2 text-green-500">
+                        <ShieldCheck className="h-5 w-5" />
+                        <span className="font-medium">Ellenőrizve!</span>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-muted-foreground text-sm">
+                          Oldd meg a feladatot: <span className="text-foreground font-bold">{captcha.question}</span>
+                        </p>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Válasz"
+                            value={captchaInput}
+                            onChange={(e) => setCaptchaInput(e.target.value)}
+                            className="bg-card border-border flex-1"
+                          />
+                          <Button type="button" variant="secondary" onClick={verifyCaptcha} disabled={!captchaInput}>
+                            Ellenőrzés
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Remember Me - only for signin */}
               {mode === "signin" && (
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -271,10 +255,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                   />
-                  <Label
-                    htmlFor="rememberMe"
-                    className="text-sm text-muted-foreground cursor-pointer"
-                  >
+                  <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer">
                     Bejelentkezve maradok
                   </Label>
                 </div>
@@ -283,7 +264,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                disabled={loading || !captchaVerified}
+                disabled={loading || (needsCaptcha && !captchaVerified)}
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -295,17 +276,13 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
               </Button>
             </form>
 
-            {/* Toggle Mode */}
             <div className="mt-6 text-center">
               <p className="text-muted-foreground">
                 {mode === "signin" ? (
                   <>
                     Nincs még fiókod?{" "}
                     <button
-                      onClick={() => {
-                        setMode("signup");
-                        resetCaptcha();
-                      }}
+                      onClick={() => { setMode("signup"); resetCaptcha(); }}
                       className="text-primary hover:underline font-medium"
                     >
                       Regisztrálj
@@ -315,10 +292,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) 
                   <>
                     Már van fiókod?{" "}
                     <button
-                      onClick={() => {
-                        setMode("signin");
-                        resetCaptcha();
-                      }}
+                      onClick={() => { setMode("signin"); resetCaptcha(); }}
                       className="text-primary hover:underline font-medium"
                     >
                       Jelentkezz be
