@@ -52,6 +52,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_featured: boolean | null
+          last_episode_at: string | null
           status: string | null
           title: string
           video_url: string | null
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean | null
+          last_episode_at?: string | null
           status?: string | null
           title: string
           video_url?: string | null
@@ -78,6 +80,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_featured?: boolean | null
+          last_episode_at?: string | null
           status?: string | null
           title?: string
           video_url?: string | null
@@ -239,6 +242,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      news_posts: {
+        Row: {
+          author_id: string
+          category: string
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          is_pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          category?: string
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
