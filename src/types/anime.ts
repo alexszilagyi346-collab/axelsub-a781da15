@@ -10,4 +10,5 @@ export interface Anime {
   year: number | null;
   status: string | null;
   episodes_count: number | null;
+  last_episode_at: string | null;
 }
