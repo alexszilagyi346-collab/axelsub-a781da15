@@ -3,6 +3,7 @@ import HeroBanner from "@/components/HeroBanner";
 import AnimeGrid from "@/components/AnimeGrid";
 import ContinueWatching from "@/components/ContinueWatching";
 import ParticleBackground from "@/components/ParticleBackground";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const Index = () => {
   return (
@@ -21,6 +22,9 @@ const Index = () => {
         
         <AnimeGrid />
       </main>
+
+      {/* Scroll to top */}
+      <ScrollToTop />
 
       {/* Footer */}
       <footer className="border-t border-border/30 py-8 mt-12 relative z-10">
