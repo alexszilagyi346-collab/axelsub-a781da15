@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -34,20 +34,20 @@ export const useAuth = () => {
     };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     return { data, error };
-  }, []);
+  };
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { data, error };
-  }, []);
+  };
 
-  const signOut = useCallback(async () => {
+  const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     return { error };
-  }, []);
+  };
 
   return { user, session, loading, signUp, signIn, signOut };
 };
