@@ -25,8 +25,7 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
     : 0;
 
   // Check if anime had a new episode in the last 48 hours
-  const lastEpisodeAt = (anime as any).last_episode_at;
-  const isNew = lastEpisodeAt && (Date.now() - new Date(lastEpisodeAt).getTime()) < 48 * 60 * 60 * 1000;
+  const isNew = anime.last_episode_at && (Date.now() - new Date(anime.last_episode_at).getTime()) < 48 * 60 * 60 * 1000;
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!cardRef.current) return;
