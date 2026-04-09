@@ -40,6 +40,7 @@ export const useLatestAnimes = (limit: number = 12) => {
       const { data, error } = await supabase
         .from("animes")
         .select("*")
+        .order("last_episode_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(limit);
 
