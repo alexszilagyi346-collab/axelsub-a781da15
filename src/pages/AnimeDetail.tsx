@@ -98,57 +98,46 @@ const AnimeDetail = () => {
     );
   }
 
+  const playerProps = {
+    videoUrl: selectedEpisode?.video_url || anime.video_url!,
+    title: selectedEpisode
+      ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}`
+      : anime.title,
+    posterUrl: anime.image_url || undefined,
+    onClose: () => setIsPlaying(false),
+    backupVideoUrl: selectedEpisode?.backup_video_url || undefined,
+    quality360p: selectedEpisode?.quality_360p || undefined,
+    quality480p: selectedEpisode?.quality_480p || undefined,
+    quality720p: selectedEpisode?.quality_720p || undefined,
+    quality1080p: selectedEpisode?.quality_1080p || undefined,
+    opStart: selectedEpisode?.op_start || undefined,
+    opEnd: selectedEpisode?.op_end || undefined,
+    edStart: selectedEpisode?.ed_start || undefined,
+    edEnd: selectedEpisode?.ed_end || undefined,
+    hasNextEpisode: !!nextEpisodeInfo,
+    onNextEpisode: handleNextEpisode,
+    nextEpisodeTitle: nextEpisodeInfo?.title,
+    animeId: anime.id,
+    episodeId: selectedEpisode?.id,
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
-      {/* Video Player - Use SubtitleVideoPlayer for external subtitles */}
+
+      {/* Inline Video Player - compact, user can fullscreen */}
       {isPlaying && (selectedEpisode?.video_url || anime.video_url) && (
-        hasExternalSubtitle ? (
-          <SubtitleVideoPlayer
-            videoUrl={selectedEpisode?.video_url || anime.video_url!}
-            title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
-            posterUrl={anime.image_url || undefined}
-            onClose={() => setIsPlaying(false)}
-            subtitleUrl={selectedEpisode!.subtitle_url!}
-            backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
-            quality360p={selectedEpisode?.quality_360p || undefined}
-            quality480p={selectedEpisode?.quality_480p || undefined}
-            quality720p={selectedEpisode?.quality_720p || undefined}
-            quality1080p={selectedEpisode?.quality_1080p || undefined}
-            opStart={selectedEpisode?.op_start || undefined}
-            opEnd={selectedEpisode?.op_end || undefined}
-            edStart={selectedEpisode?.ed_start || undefined}
-            edEnd={selectedEpisode?.ed_end || undefined}
-            hasNextEpisode={!!nextEpisodeInfo}
-            onNextEpisode={handleNextEpisode}
-            nextEpisodeTitle={nextEpisodeInfo?.title}
-            animeId={anime.id}
-            episodeId={selectedEpisode?.id}
-          />
-        ) : (
-          <VideoPlayer
-            videoUrl={selectedEpisode?.video_url || anime.video_url!}
-            title={selectedEpisode ? `${anime.title} - ${selectedEpisode.episode_number}. epizód${selectedEpisode.title ? `: ${selectedEpisode.title}` : ""}` : anime.title}
-            posterUrl={anime.image_url || undefined}
-            onClose={() => setIsPlaying(false)}
-            backupVideoUrl={selectedEpisode?.backup_video_url || undefined}
-            quality360p={selectedEpisode?.quality_360p || undefined}
-            quality480p={selectedEpisode?.quality_480p || undefined}
-            quality720p={selectedEpisode?.quality_720p || undefined}
-            quality1080p={selectedEpisode?.quality_1080p || undefined}
-            opStart={selectedEpisode?.op_start || undefined}
-            opEnd={selectedEpisode?.op_end || undefined}
-            edStart={selectedEpisode?.ed_start || undefined}
-            edEnd={selectedEpisode?.ed_end || undefined}
-            subtitleUrl={selectedEpisode?.subtitle_url || undefined}
-            hasNextEpisode={!!nextEpisodeInfo}
-            onNextEpisode={handleNextEpisode}
-            nextEpisodeTitle={nextEpisodeInfo?.title}
-            animeId={anime.id}
-            episodeId={selectedEpisode?.id}
-          />
-        )
+        <div className="pt-16">
+          <div className="container mx-auto px-4 py-4">
+            <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5">
+              {hasExternalSubtitle ? (
+                <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
+              ) : (
+                <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
+              )}
+            </div>
+          </div>
+        </div>
       )}
       
       <main className="pt-16">
