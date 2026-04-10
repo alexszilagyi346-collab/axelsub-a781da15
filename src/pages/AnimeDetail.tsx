@@ -260,20 +260,56 @@ const AnimeDetail = () => {
               )}
             </div>
 
-            {/* Episodes - takes 1/3, scrollable */}
-            <div className="lg:col-span-1 max-h-[60vh] overflow-y-auto rounded-xl border border-border/30 bg-card/50 p-4">
-              <EpisodeList
-                animeId={anime.id}
-                onSelectEpisode={(episode) => {
-                  setSelectedEpisode(episode);
-                  setIsPlaying(true);
-                }}
-                selectedEpisodeId={selectedEpisode?.id}
-                onEpisodesLoaded={setEpisodes}
-              />
+            {/* Sidebar - episode controls + list */}
+            <div className="lg:col-span-1 flex flex-col gap-3">
+              {/* Current episode info */}
+              {selectedEpisode && (
+                <div className="rounded-xl border border-border/30 bg-card/50 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Monitor className="h-4 w-4" />
+                    <span className="font-medium text-foreground">
+                      Most nézed: {selectedEpisode.episode_number}. rész
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center gap-1"
+                      disabled={!prevEpisodeInfo}
+                      onClick={handlePrevEpisode}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Előző rész
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center gap-1"
+                      disabled={!nextEpisodeInfo}
+                      onClick={handleNextEpisode}
+                    >
+                      Következő rész
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Episode list - scrollable */}
+              <div className="rounded-xl border border-border/30 bg-card/50 p-4 max-h-[50vh] overflow-y-auto">
+                <EpisodeList
+                  animeId={anime.id}
+                  onSelectEpisode={(episode) => {
+                    setSelectedEpisode(episode);
+                    setIsPlaying(true);
+                  }}
+                  selectedEpisodeId={selectedEpisode?.id}
+                  onEpisodesLoaded={setEpisodes}
+                />
+              </div>
             </div>
-          </div>
-        </div>
 
         {/* Description Section */}
         <div className="container mx-auto px-4 py-8">
