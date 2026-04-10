@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
 import SubtitleVideoPlayer from "@/components/SubtitleVideoPlayer";
+import EmbedPlayer, { isEmbedUrl } from "@/components/EmbedPlayer";
 import EpisodeList, { Episode } from "@/components/EpisodeList";
 import FavoriteButton from "@/components/FavoriteButton";
 import WatchlistButton from "@/components/WatchlistButton";
