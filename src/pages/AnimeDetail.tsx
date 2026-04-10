@@ -125,21 +125,6 @@ const AnimeDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Inline Video Player - compact, user can fullscreen */}
-      {isPlaying && (selectedEpisode?.video_url || anime.video_url) && (
-        <div className="pt-16">
-          <div className="container mx-auto px-4 py-4">
-            <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5">
-              {hasExternalSubtitle ? (
-                <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
-              ) : (
-                <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
       <main className="pt-16">
         {/* Hero Section */}
         <div className="relative w-full h-[60vh] min-h-[400px] overflow-hidden">
@@ -189,7 +174,6 @@ const AnimeDetail = () => {
                    anime.status === "ongoing" ? "Folyamatban" : "Beharangozott"}
                 </span>
               )}
-              {/* External subtitle indicator */}
               {selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external" && (
                 <span className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-cyan-500/20 text-cyan-400">
                   <Type className="h-3 w-3" />
@@ -220,17 +204,11 @@ const AnimeDetail = () => {
                 </Button>
               )}
               
-              {/* Favorite Button */}
               <FavoriteButton animeId={anime.id} size="lg" showLabel />
-              
-              {/* Watchlist Button */}
               <WatchlistButton animeId={anime.id} />
-              
-              {/* Subscribe Button - for episode notifications */}
               <SubscribeButton animeId={anime.id} showLabel />
             </div>
             
-            {/* Rating Stars - for logged in users */}
             {user && (
               <div className="mt-4">
                 <RatingStars animeId={anime.id} />
@@ -239,17 +217,49 @@ const AnimeDetail = () => {
           </div>
         </div>
 
-        {/* Episodes Section */}
+        {/* Player + Episodes side by side */}
         <div className="container mx-auto px-4 py-8">
-          <EpisodeList
-            animeId={anime.id}
-            onSelectEpisode={(episode) => {
-              setSelectedEpisode(episode);
-              setIsPlaying(true);
-            }}
-            selectedEpisodeId={selectedEpisode?.id}
-            onEpisodesLoaded={setEpisodes}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Video Player - takes 2/3 */}
+            <div className="lg:col-span-2">
+              {isPlaying && (selectedEpisode?.video_url || anime.video_url) ? (
+                <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5 aspect-video">
+                  {hasExternalSubtitle ? (
+                    <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
+                  ) : (
+                    <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="rounded-xl overflow-hidden border border-border/30 aspect-video flex items-center justify-center bg-muted/30 cursor-pointer group"
+                  onClick={() => {
+                    if (selectedEpisode?.video_url || anime.video_url) setIsPlaying(true);
+                  }}
+                >
+                  <div className="text-center">
+                    <Play className="h-16 w-16 text-muted-foreground/50 group-hover:text-primary transition-colors mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      {selectedEpisode ? `${selectedEpisode.episode_number}. epizód` : "Válassz egy epizódot a lejátszáshoz"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Episodes - takes 1/3, scrollable */}
+            <div className="lg:col-span-1 max-h-[60vh] overflow-y-auto rounded-xl border border-border/30 bg-card/50 p-4">
+              <EpisodeList
+                animeId={anime.id}
+                onSelectEpisode={(episode) => {
+                  setSelectedEpisode(episode);
+                  setIsPlaying(true);
+                }}
+                selectedEpisodeId={selectedEpisode?.id}
+                onEpisodesLoaded={setEpisodes}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Description Section */}
