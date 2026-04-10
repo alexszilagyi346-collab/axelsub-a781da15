@@ -41,13 +41,18 @@ const AnimeDetail = () => {
     enabled: !!id,
   });
 
-  // Calculate next episode info
+  // Calculate prev/next episode info
+  const prevEpisodeInfo = useMemo(() => {
+    if (!selectedEpisode || episodes.length === 0) return null;
+    const currentIndex = episodes.findIndex(ep => ep.id === selectedEpisode.id);
+    if (currentIndex <= 0) return null;
+    return episodes[currentIndex - 1];
+  }, [selectedEpisode, episodes]);
+
   const nextEpisodeInfo = useMemo(() => {
     if (!selectedEpisode || episodes.length === 0) return null;
-    
     const currentIndex = episodes.findIndex(ep => ep.id === selectedEpisode.id);
     if (currentIndex === -1 || currentIndex >= episodes.length - 1) return null;
-    
     const nextEp = episodes[currentIndex + 1];
     return {
       episode: nextEp,
@@ -55,9 +60,17 @@ const AnimeDetail = () => {
     };
   }, [selectedEpisode, episodes]);
 
+  const handlePrevEpisode = () => {
+    if (prevEpisodeInfo) {
+      setSelectedEpisode(prevEpisodeInfo);
+      setIsPlaying(true);
+    }
+  };
+
   const handleNextEpisode = () => {
     if (nextEpisodeInfo) {
       setSelectedEpisode(nextEpisodeInfo.episode);
+      setIsPlaying(true);
     }
   };
 
