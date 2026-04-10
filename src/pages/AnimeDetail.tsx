@@ -14,7 +14,7 @@ import SimilarAnimes from "@/components/SimilarAnimes";
 import SubscribeButton from "@/components/SubscribeButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, ArrowLeft, Calendar, Tag, Type } from "lucide-react";
+import { Play, ArrowLeft, Calendar, Tag, Type, ChevronLeft, ChevronRight, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Anime } from "@/types/anime";
 
