@@ -77,6 +77,8 @@ const AnimeDetail = () => {
 
   // Determine which player to use
   const hasExternalSubtitle = selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external";
+  const currentVideoUrl = selectedEpisode?.video_url || anime.video_url || "";
+  const isEmbed = isEmbedUrl(currentVideoUrl);
 
   if (isLoading) {
     return (
