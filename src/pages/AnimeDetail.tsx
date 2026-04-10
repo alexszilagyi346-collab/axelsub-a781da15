@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
 import SubtitleVideoPlayer from "@/components/SubtitleVideoPlayer";
+import EmbedPlayer, { isEmbedUrl } from "@/components/EmbedPlayer";
 import EpisodeList, { Episode } from "@/components/EpisodeList";
 import FavoriteButton from "@/components/FavoriteButton";
 import WatchlistButton from "@/components/WatchlistButton";
@@ -76,6 +77,8 @@ const AnimeDetail = () => {
 
   // Determine which player to use
   const hasExternalSubtitle = selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external";
+  const currentVideoUrl = selectedEpisode?.video_url || anime.video_url || "";
+  const isEmbed = isEmbedUrl(currentVideoUrl);
 
   if (isLoading) {
     return (
@@ -236,8 +239,14 @@ const AnimeDetail = () => {
             {/* Video Player - takes 2/3 */}
             <div className="lg:col-span-2">
               {isPlaying && (selectedEpisode?.video_url || anime.video_url) ? (
-                <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5 aspect-video">
-                  {hasExternalSubtitle ? (
+                <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5">
+                  {isEmbed ? (
+                    <EmbedPlayer
+                      videoUrl={currentVideoUrl}
+                      title={playerProps.title}
+                      onClose={() => setIsPlaying(false)}
+                    />
+                  ) : hasExternalSubtitle ? (
                     <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
                   ) : (
                     <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
