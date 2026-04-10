@@ -17,6 +17,7 @@ import {
   Film
 } from "lucide-react";
 import EpisodeManager from "@/components/EpisodeManager";
+import SocialLinksManager from "@/components/SocialLinksManager";
 import Header from "@/components/Header";
 import MALSearch from "@/components/MALSearch";
 import { Button } from "@/components/ui/button";
@@ -289,6 +290,9 @@ const Admin = () => {
               </div>
             </div>
           </div>
+
+          {/* Social Links Manager */}
+          <SocialLinksManager />
 
           {/* Header */}
           <div className="flex items-center justify-between mb-8">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 import AuthModal from "@/components/AuthModal";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "sonner";
 
 const Header = () => {
@@ -20,6 +21,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { data: siteSettings } = useSiteSettings();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -106,6 +108,24 @@ const Header = () => {
                 </Link>
               )}
             </nav>
+
+            {/* Social Links */}
+            <div className="flex items-center gap-1">
+              {siteSettings?.facebook_url && (
+                <a href={siteSettings.facebook_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg">
+                    <Facebook className="h-4 w-4" />
+                  </Button>
+                </a>
+              )}
+              {siteSettings?.discord_url && (
+                <a href={siteSettings.discord_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg">
+                    <MessageCircle className="h-4 w-4" />
+                  </Button>
+                </a>
+              )}
+            </div>
 
             {/* Actions */}
             <div className="flex items-center gap-2">
