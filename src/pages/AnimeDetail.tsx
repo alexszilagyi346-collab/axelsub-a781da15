@@ -310,6 +310,8 @@ const AnimeDetail = () => {
                 />
               </div>
             </div>
+          </div>
+        </div>
 
         {/* Description Section */}
         <div className="container mx-auto px-4 py-8">
