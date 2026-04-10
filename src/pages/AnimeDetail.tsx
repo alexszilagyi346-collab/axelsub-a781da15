@@ -14,7 +14,7 @@ import SimilarAnimes from "@/components/SimilarAnimes";
 import SubscribeButton from "@/components/SubscribeButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, ArrowLeft, Calendar, Tag, Type } from "lucide-react";
+import { Play, ArrowLeft, Calendar, Tag, Type, ChevronLeft, ChevronRight, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import type { Anime } from "@/types/anime";
 
@@ -41,13 +41,18 @@ const AnimeDetail = () => {
     enabled: !!id,
   });
 
-  // Calculate next episode info
+  // Calculate prev/next episode info
+  const prevEpisodeInfo = useMemo(() => {
+    if (!selectedEpisode || episodes.length === 0) return null;
+    const currentIndex = episodes.findIndex(ep => ep.id === selectedEpisode.id);
+    if (currentIndex <= 0) return null;
+    return episodes[currentIndex - 1];
+  }, [selectedEpisode, episodes]);
+
   const nextEpisodeInfo = useMemo(() => {
     if (!selectedEpisode || episodes.length === 0) return null;
-    
     const currentIndex = episodes.findIndex(ep => ep.id === selectedEpisode.id);
     if (currentIndex === -1 || currentIndex >= episodes.length - 1) return null;
-    
     const nextEp = episodes[currentIndex + 1];
     return {
       episode: nextEp,
@@ -55,9 +60,17 @@ const AnimeDetail = () => {
     };
   }, [selectedEpisode, episodes]);
 
+  const handlePrevEpisode = () => {
+    if (prevEpisodeInfo) {
+      setSelectedEpisode(prevEpisodeInfo);
+      setIsPlaying(true);
+    }
+  };
+
   const handleNextEpisode = () => {
     if (nextEpisodeInfo) {
       setSelectedEpisode(nextEpisodeInfo.episode);
+      setIsPlaying(true);
     }
   };
 
@@ -247,17 +260,55 @@ const AnimeDetail = () => {
               )}
             </div>
 
-            {/* Episodes - takes 1/3, scrollable */}
-            <div className="lg:col-span-1 max-h-[60vh] overflow-y-auto rounded-xl border border-border/30 bg-card/50 p-4">
-              <EpisodeList
-                animeId={anime.id}
-                onSelectEpisode={(episode) => {
-                  setSelectedEpisode(episode);
-                  setIsPlaying(true);
-                }}
-                selectedEpisodeId={selectedEpisode?.id}
-                onEpisodesLoaded={setEpisodes}
-              />
+            {/* Sidebar - episode controls + list */}
+            <div className="lg:col-span-1 flex flex-col gap-3">
+              {/* Current episode info */}
+              {selectedEpisode && (
+                <div className="rounded-xl border border-border/30 bg-card/50 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Monitor className="h-4 w-4" />
+                    <span className="font-medium text-foreground">
+                      Most nézed: {selectedEpisode.episode_number}. rész
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center gap-1"
+                      disabled={!prevEpisodeInfo}
+                      onClick={handlePrevEpisode}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Előző rész
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-center gap-1"
+                      disabled={!nextEpisodeInfo}
+                      onClick={handleNextEpisode}
+                    >
+                      Következő rész
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Episode list - scrollable */}
+              <div className="rounded-xl border border-border/30 bg-card/50 p-4 max-h-[50vh] overflow-y-auto">
+                <EpisodeList
+                  animeId={anime.id}
+                  onSelectEpisode={(episode) => {
+                    setSelectedEpisode(episode);
+                    setIsPlaying(true);
+                  }}
+                  selectedEpisodeId={selectedEpisode?.id}
+                  onEpisodesLoaded={setEpisodes}
+                />
+              </div>
             </div>
           </div>
         </div>
