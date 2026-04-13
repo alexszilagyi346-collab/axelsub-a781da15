@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 import AuthModal from "@/components/AuthModal";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { useIsModerator } from "@/hooks/useIsModerator";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "sonner";
 
@@ -21,6 +22,8 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { isModerator } = useIsModerator();
+  const canAccessAdmin = isAdmin || isModerator;
   const { data: siteSettings } = useSiteSettings();
   const navigate = useNavigate();
 
@@ -88,6 +91,17 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {/* Manga */}
+              <Link
+                to="/manga"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+              >
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Manga
+                </span>
+              </Link>
+
               {/* Hírek */}
               <Link
                 to="/news"
@@ -99,12 +113,12 @@ const Header = () => {
                 </span>
               </Link>
 
-              {isAdmin && (
+              {canAccessAdmin && (
                 <Link
                   to="/admin"
                   className="px-4 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-all"
                 >
-                  Admin
+                  {isAdmin ? "Admin" : "Moderátor"}
                 </Link>
               )}
             </nav>
@@ -154,9 +168,9 @@ const Header = () => {
                     <DropdownMenuItem onClick={() => navigate("/history")}>
                       <History className="h-4 w-4 mr-2" /> Előzmények
                     </DropdownMenuItem>
-                    {isAdmin && (
+                    {canAccessAdmin && (
                       <DropdownMenuItem onClick={() => navigate("/admin")}>
-                        <Settings className="h-4 w-4 mr-2" /> Admin Panel
+                        <Settings className="h-4 w-4 mr-2" /> {isAdmin ? "Admin Panel" : "Moderátor Panel"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator className="bg-border/50" />
@@ -220,6 +234,14 @@ const Header = () => {
               ))}
 
               <Link
+                to="/manga"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Manga
+              </Link>
+
+              <Link
                 to="/news"
                 className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
                 onClick={() => setMobileMenuOpen(false)}
@@ -227,13 +249,13 @@ const Header = () => {
                 Hírek
               </Link>
 
-              {isAdmin && (
+              {canAccessAdmin && (
                 <Link
                   to="/admin"
                   className="block py-2 px-3 rounded-lg text-primary hover:bg-primary/10 transition-all font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Admin
+                  {isAdmin ? "Admin" : "Moderátor"}
                 </Link>
               )}
             </nav>
