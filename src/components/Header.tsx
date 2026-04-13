@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen, MessageSquare } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,6 +110,17 @@ const Header = () => {
                 <span className="flex items-center gap-1.5">
                   <Newspaper className="h-3.5 w-3.5" />
                   Hírek
+                </span>
+              </Link>
+
+              {/* Kérések */}
+              <Link
+                to="/requests"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+              >
+                <span className="flex items-center gap-1.5">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Kérések
                 </span>
               </Link>
 
@@ -247,6 +258,14 @@ const Header = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Hírek
+              </Link>
+
+              <Link
+                to="/requests"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Kérések
               </Link>
 
               {canAccessAdmin && (

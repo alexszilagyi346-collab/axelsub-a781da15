@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { BookOpen, Search, Plus, Trash2, Edit, Star, ExternalLink, Loader2, X } from "lucide-react";
+import { BookOpen, Search, Plus, Trash2, Edit, Star, ExternalLink, Loader2, X, Upload, Image as ImageIcon } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +90,28 @@ const MangaForm = ({ manga, onClose }: { manga?: Manga | null; onClose: () => vo
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(manga?.image_url || null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImageFile = async (file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `manga-covers/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const { error } = await supabase.storage.from("animek").upload(fileName, file);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from("animek").getPublicUrl(fileName);
+    return publicUrl;
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -106,6 +128,8 @@ const MangaForm = ({ manga, onClose }: { manga?: Manga | null; onClose: () => vo
 
   const handlePickResult = (r: any) => {
     setForm(f => ({ ...f, title: r.title, description: r.synopsis, image_url: r.imageUrl, genre: r.genres, year: r.year ? String(r.year) : "", author: r.author || "" }));
+    setImagePreview(r.imageUrl || null);
+    setImageFile(null);
     setSearchResults([]);
     setSearchQuery("");
   };
@@ -114,10 +138,14 @@ const MangaForm = ({ manga, onClose }: { manga?: Manga | null; onClose: () => vo
     if (!form.title.trim()) { toast.error("A cím megadása kötelező!"); return; }
     setSaving(true);
     try {
+      let finalImageUrl = form.image_url.trim() || null;
+      if (imageFile) {
+        finalImageUrl = await uploadImageFile(imageFile);
+      }
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || null,
-        image_url: form.image_url.trim() || null,
+        image_url: finalImageUrl,
         genre: form.genre.trim() || null,
         author: form.author.trim() || null,
         status: form.status,
@@ -206,8 +234,46 @@ const MangaForm = ({ manga, onClose }: { manga?: Manga | null; onClose: () => vo
             <Input value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} placeholder="2024" className="bg-background" type="number" />
           </div>
           <div className="space-y-2">
-            <Label>Borítókép URL</Label>
-            <Input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://..." className="bg-background" />
+            <Label>Borítókép</Label>
+            <div
+              onClick={() => imageInputRef.current?.click()}
+              className="border-2 border-dashed border-border rounded-xl p-4 cursor-pointer hover:border-primary transition-colors text-center"
+            >
+              {imagePreview ? (
+                <div className="relative">
+                  <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <Upload className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground py-2">
+                  <ImageIcon className="h-8 w-8" />
+                  <span className="text-sm">Kattints a kép feltöltéséhez</span>
+                </div>
+              )}
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageFileSelect}
+              className="hidden"
+            />
+            {imageFile && (
+              <p className="text-xs text-primary">Kiválasztva: {imageFile.name}</p>
+            )}
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">vagy URL</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <Input
+              value={form.image_url}
+              onChange={e => { setForm(f => ({ ...f, image_url: e.target.value })); if (e.target.value) { setImagePreview(e.target.value); setImageFile(null); } }}
+              placeholder="https://..."
+              className="bg-background text-sm"
+            />
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Olvasási link</Label>

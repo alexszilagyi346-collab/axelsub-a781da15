@@ -33,6 +33,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useIsModerator } from "@/hooks/useIsModerator";
 import { useAnimes } from "@/hooks/useAnimes";
@@ -227,6 +228,7 @@ const Admin = () => {
     description: "",
     genre: "",
     year: "",
+    status: "ongoing",
     is_featured: false,
     video_url: "",
     image_url: "",
@@ -323,6 +325,7 @@ const Admin = () => {
         image_url: imageUrl,
         video_url: formData.video_url.trim() || null,
         year: formData.year ? parseInt(formData.year) : null,
+        status: formData.status || "ongoing",
       };
 
       if (editingAnime) {
@@ -355,6 +358,7 @@ const Admin = () => {
       description: anime.description || "",
       genre: anime.genre || "",
       year: anime.year ? String(anime.year) : "",
+      status: anime.status || "ongoing",
       is_featured: anime.is_featured || false,
       video_url: anime.video_url || "",
       image_url: anime.image_url || "",
@@ -376,7 +380,7 @@ const Admin = () => {
   };
 
   const resetForm = () => {
-    setFormData({ title: "", description: "", genre: "", year: "", is_featured: false, video_url: "", image_url: "" });
+    setFormData({ title: "", description: "", genre: "", year: "", status: "ongoing", is_featured: false, video_url: "", image_url: "" });
     setImageFile(null);
     setImagePreview(null);
     setEditingAnime(null);
@@ -484,6 +488,18 @@ const Admin = () => {
                           <Input id="year" type="number" value={formData.year}
                             onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                             placeholder="2024" className="bg-background" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Státusz</Label>
+                          <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                            <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ongoing">Vetítés alatt</SelectItem>
+                              <SelectItem value="completed">Befejezett</SelectItem>
+                              <SelectItem value="upcoming">Hamarosan</SelectItem>
+                              <SelectItem value="hiatus">Szünetel</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="description">Leírás</Label>
