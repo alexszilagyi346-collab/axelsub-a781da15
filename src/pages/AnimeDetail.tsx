@@ -287,88 +287,87 @@ const AnimeDetail = () => {
         </div>
 
         {/* Player + Episodes */}
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Video Player */}
-            <div className="lg:col-span-2">
-              {isPlaying && (selectedEpisode?.video_url || anime.video_url) ? (
-                <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5">
-                  {isEmbed ? (
-                    <EmbedPlayer
-                      videoUrl={currentVideoUrl}
-                      title={playerProps.title}
-                      onClose={() => setIsPlaying(false)}
-                    />
-                  ) : hasExternalSubtitle ? (
-                    <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
-                  ) : (
-                    <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
-                  )}
+        <div className="container mx-auto px-4 py-8 max-w-5xl">
+
+          {/* Player */}
+          <div className="rounded-xl overflow-hidden border border-border/30 shadow-2xl shadow-primary/5 mb-3">
+            {isPlaying && (selectedEpisode?.video_url || anime.video_url) ? (
+              <>
+                {isEmbed ? (
+                  <EmbedPlayer
+                    videoUrl={currentVideoUrl}
+                    title={playerProps.title}
+                    onClose={() => setIsPlaying(false)}
+                  />
+                ) : hasExternalSubtitle ? (
+                  <SubtitleVideoPlayer {...playerProps} subtitleUrl={selectedEpisode!.subtitle_url!} />
+                ) : (
+                  <VideoPlayer {...playerProps} subtitleUrl={selectedEpisode?.subtitle_url || undefined} />
+                )}
+              </>
+            ) : (
+              <div
+                className="aspect-video flex items-center justify-center bg-muted/30 cursor-pointer group"
+                onClick={() => {
+                  if (selectedEpisode?.video_url || anime.video_url) setIsPlaying(true);
+                }}
+              >
+                <div className="text-center">
+                  <Play className="h-14 w-14 text-muted-foreground/40 group-hover:text-primary transition-colors mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">
+                    {selectedEpisode ? `${selectedEpisode.episode_number}. epizód lejátszása` : "Válassz egy epizódot"}
+                  </p>
                 </div>
-              ) : (
-                <div
-                  className="rounded-xl overflow-hidden border border-border/30 aspect-video flex items-center justify-center bg-muted/30 cursor-pointer group"
-                  onClick={() => {
-                    if (selectedEpisode?.video_url || anime.video_url) setIsPlaying(true);
-                  }}
+              </div>
+            )}
+          </div>
+
+          {/* Now playing + prev/next */}
+          {selectedEpisode && (
+            <div className="flex items-center justify-between gap-3 mb-4 px-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                <Monitor className="h-4 w-4 shrink-0" />
+                <span className="font-medium text-foreground truncate">
+                  Most nézed: {selectedEpisode.episode_number}. rész
+                  {selectedEpisode.title ? ` – ${selectedEpisode.title}` : ""}
+                </span>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  disabled={!prevEpisodeInfo}
+                  onClick={handlePrevEpisode}
                 >
-                  <div className="text-center">
-                    <Play className="h-16 w-16 text-muted-foreground/50 group-hover:text-primary transition-colors mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">
-                      {selectedEpisode ? `${selectedEpisode.episode_number}. epizód` : "Válassz egy epizódot a lejátszáshoz"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1 flex flex-col gap-3">
-              {selectedEpisode && (
-                <div className="rounded-xl border border-border/30 bg-card/50 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Monitor className="h-4 w-4" />
-                    <span className="font-medium text-foreground">
-                      Most nézed: {selectedEpisode.episode_number}. rész
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-center gap-1"
-                      disabled={!prevEpisodeInfo}
-                      onClick={handlePrevEpisode}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Előző rész
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-center gap-1"
-                      disabled={!nextEpisodeInfo}
-                      onClick={handleNextEpisode}
-                    >
-                      Következő rész
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-xl border border-border/30 bg-card/50 p-4 max-h-[50vh] overflow-y-auto">
-                <EpisodeList
-                  animeId={anime.id}
-                  onSelectEpisode={(episode) => {
-                    setSelectedEpisode(episode);
-                    setIsPlaying(true);
-                  }}
-                  selectedEpisodeId={selectedEpisode?.id}
-                  onEpisodesLoaded={setEpisodes}
-                />
+                  <ChevronLeft className="h-4 w-4" />
+                  Előző
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  disabled={!nextEpisodeInfo}
+                  onClick={handleNextEpisode}
+                >
+                  Következő
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
+          )}
+
+          {/* Episode list */}
+          <div className="rounded-xl border border-border/30 bg-card/50 p-4">
+            <EpisodeList
+              animeId={anime.id}
+              onSelectEpisode={(episode) => {
+                setSelectedEpisode(episode);
+                setIsPlaying(true);
+              }}
+              selectedEpisodeId={selectedEpisode?.id}
+              onEpisodesLoaded={setEpisodes}
+            />
           </div>
         </div>
 
