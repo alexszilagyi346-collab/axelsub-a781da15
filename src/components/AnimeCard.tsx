@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useContinueWatching } from "@/hooks/useWatchHistory";
 import { Badge } from "@/components/ui/badge";
 import { Flame } from "lucide-react";
+import { getAnimeUrl } from "@/lib/utils";
 
 interface AnimeCardProps {
   anime: Anime;
@@ -41,7 +42,7 @@ const AnimeCard = ({ anime }: AnimeCardProps) => {
   };
 
   return (
-    <Link to={`/anime/${anime.id}`} className="block">
+    <Link to={getAnimeUrl(anime)} className="block">
       <motion.div
         ref={cardRef}
         className="relative group rounded-xl overflow-hidden glass-card cursor-pointer"

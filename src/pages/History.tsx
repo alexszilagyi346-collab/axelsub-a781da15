@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWatchHistory, WatchHistoryEntry } from "@/hooks/useWatchHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { getAnimeUrl } from "@/lib/utils";
 
 const formatProgress = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -28,7 +29,7 @@ const HistoryItem = ({ entry }: { entry: WatchHistoryEntry }) => {
       className="flex gap-4 p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-all group"
     >
       {/* Thumbnail */}
-      <Link to={`/anime/${entry.anime_id}`} className="shrink-0">
+      <Link to={getAnimeUrl({ id: entry.anime_id, title: entry.anime?.title || "" })} className="shrink-0">
         <div className="relative w-24 sm:w-32 aspect-video rounded-lg overflow-hidden">
           <img
             src={entry.anime?.image_url || "/placeholder.svg"}
@@ -51,7 +52,7 @@ const HistoryItem = ({ entry }: { entry: WatchHistoryEntry }) => {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <Link to={`/anime/${entry.anime_id}`}>
+        <Link to={getAnimeUrl({ id: entry.anime_id, title: entry.anime?.title || "" })}>
           <h3 className="font-medium text-foreground hover:text-primary transition-colors line-clamp-1">
             {entry.anime?.title}
           </h3>
@@ -80,7 +81,7 @@ const HistoryItem = ({ entry }: { entry: WatchHistoryEntry }) => {
 
       {/* Continue button */}
       {!entry.completed && (
-        <Link to={`/anime/${entry.anime_id}`} className="shrink-0 self-center">
+        <Link to={getAnimeUrl({ id: entry.anime_id, title: entry.anime?.title || "" })} className="shrink-0 self-center">
           <Button size="sm" className="gap-2">
             <Play className="w-4 h-4" />
             <span className="hidden sm:inline">Folytatás</span>

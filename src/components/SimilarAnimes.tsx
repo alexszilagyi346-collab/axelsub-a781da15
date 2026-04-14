@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles } from "lucide-react";
 import type { Anime } from "@/types/anime";
+import { getAnimeUrl } from "@/lib/utils";
 
 interface SimilarAnimesProps {
   currentAnimeId: string;
@@ -43,7 +44,7 @@ const SimilarAnimes = ({ currentAnimeId, genre }: SimilarAnimesProps) => {
         {similarAnimes.map((anime) => (
           <Link
             key={anime.id}
-            to={`/anime/${anime.id}`}
+            to={getAnimeUrl(anime)}
             className="group relative rounded-lg overflow-hidden border border-border bg-card hover:border-primary/50 transition-all duration-300"
           >
             <div className="aspect-[3/4] overflow-hidden">

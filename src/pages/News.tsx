@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper, Clock, Pin, Megaphone, Zap, Trash2, Plus, Edit3 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getAnimeUrl } from "@/lib/utils";
 import { format } from "date-fns";
 import { hu } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -269,7 +270,7 @@ const News = () => {
                 <div className="space-y-3">
                   {recentEpisodes.map((ep, i) => (
                     <motion.div key={ep.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                      <Link to={`/anime/${ep.anime?.id}`}
+                      <Link to={ep.anime ? getAnimeUrl({ id: ep.anime.id, title: ep.anime.title }) : "#"}
                         className="flex items-center gap-4 p-4 rounded-xl glass border border-border/30 hover:border-primary/40 hover:bg-primary/5 transition-all group">
                         <div className="w-16 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
                           {ep.anime?.image_url ? (

@@ -3,6 +3,7 @@ import { Play, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useContinueWatching } from "@/hooks/useWatchHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { getAnimeUrl } from "@/lib/utils";
 
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -50,7 +51,7 @@ const ContinueWatching = () => {
                 transition={{ duration: 0.4, delay: index * 0.08 }}
               >
                 <Link
-                  to={`/anime/${entry.anime_id}`}
+                  to={getAnimeUrl({ id: entry.anime_id, title: entry.anime?.title || "" })}
                   className="group relative flex gap-3 rounded-xl overflow-hidden glass-card p-3 hover:border-primary/50 transition-all duration-300 border border-border/50"
                 >
                   {/* Thumbnail with play overlay */}

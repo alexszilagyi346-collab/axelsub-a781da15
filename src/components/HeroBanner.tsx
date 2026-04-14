@@ -5,6 +5,7 @@ import { useFeaturedAnimes } from "@/hooks/useAnimes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { getAnimeUrl } from "@/lib/utils";
 
 const HeroBanner = () => {
   const { data: featuredAnimes, isLoading } = useFeaturedAnimes();
@@ -108,7 +109,7 @@ const HeroBanner = () => {
           <Button
             size="lg"
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold gap-2 neon-glow"
-            onClick={() => currentAnime.id && navigate(`/anime/${currentAnime.id}`)}
+            onClick={() => currentAnime.id && navigate(getAnimeUrl({ id: currentAnime.id, title: currentAnime.title || "" }))}
           >
             <Play className="h-5 w-5 fill-current" />
             Megtekintés
@@ -117,7 +118,7 @@ const HeroBanner = () => {
             size="lg"
             variant="outline"
             className="border-primary/30 text-foreground hover:bg-primary/10 hover:border-primary/50 font-semibold transition-all"
-            onClick={() => currentAnime.id && navigate(`/anime/${currentAnime.id}`)}
+            onClick={() => currentAnime.id && navigate(getAnimeUrl({ id: currentAnime.id, title: currentAnime.title || "" }))}
           >
             Részletek
           </Button>

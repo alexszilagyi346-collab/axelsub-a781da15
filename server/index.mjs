@@ -103,12 +103,15 @@ async function createServer() {
     }
   }
 
-  app.get("/anime/:id", (req, res, next) =>
-    handleBotRequest(req, res, next, { table: "animes", id: req.params.id })
+  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const extractId = (slug) => { const m = slug.match(UUID_RE); return m ? m[0] : slug; };
+
+  app.get("/anime/:slug", (req, res, next) =>
+    handleBotRequest(req, res, next, { table: "animes", id: extractId(req.params.slug) })
   );
 
-  app.get("/manga/:id", (req, res, next) =>
-    handleBotRequest(req, res, next, { table: "mangas", id: req.params.id })
+  app.get("/manga/:slug", (req, res, next) =>
+    handleBotRequest(req, res, next, { table: "mangas", id: extractId(req.params.slug) })
   );
 
   if (!isProd) {

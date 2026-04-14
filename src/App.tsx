@@ -26,7 +26,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
-          <Route path="/anime/:id" element={<ProtectedRoute><AnimeDetail /></ProtectedRoute>} />
+          <Route path="/anime/:slug" element={<ProtectedRoute><AnimeDetail /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />

@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { extractIdFromSlug } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,8 @@ import { useOpenGraph } from "@/hooks/useOpenGraph";
 import type { Anime } from "@/types/anime";
 
 const AnimeDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const id = slug ? extractIdFromSlug(slug) : undefined;
   const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);

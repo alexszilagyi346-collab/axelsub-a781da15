@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import AdvancedFilters, { FilterState } from "@/components/AdvancedFilters";
+import { getAnimeUrl } from "@/lib/utils";
 
 const Browse = () => {
   const { data: animes, isLoading } = useAnimes();
@@ -84,7 +85,7 @@ const Browse = () => {
   const handleRandomAnime = () => {
     if (filteredAnimes.length > 0) {
       const randomIndex = Math.floor(Math.random() * filteredAnimes.length);
-      navigate(`/anime/${filteredAnimes[randomIndex].id}`);
+      navigate(getAnimeUrl(filteredAnimes[randomIndex]));
     }
   };
 
