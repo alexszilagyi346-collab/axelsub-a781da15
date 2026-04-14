@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Play, ArrowLeft, Calendar, Tag, Type, ChevronLeft, ChevronRight, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useOpenGraph } from "@/hooks/useOpenGraph";
 import type { Anime } from "@/types/anime";
 
 const AnimeDetail = () => {
@@ -74,6 +75,14 @@ const AnimeDetail = () => {
       setIsPlaying(true);
     }
   };
+
+  useOpenGraph({
+    title: anime?.title,
+    description: anime?.description,
+    image: anime?.image_url,
+    url: window.location.href,
+    type: "video.other",
+  });
 
   // Determine which player to use
   const hasExternalSubtitle = selectedEpisode?.subtitle_url && selectedEpisode?.subtitle_type === "external";
