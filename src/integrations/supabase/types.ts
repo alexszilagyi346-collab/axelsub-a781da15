@@ -243,6 +243,89 @@ export type Database = {
           },
         ]
       }
+      manga_chapters: {
+        Row: {
+          id: string
+          manga_id: string
+          chapter_number: number
+          title: string | null
+          page_urls: string[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          manga_id: string
+          chapter_number: number
+          title?: string | null
+          page_urls?: string[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          manga_id?: string
+          chapter_number?: number
+          title?: string | null
+          page_urls?: string[]
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manga_chapters_manga_id_fkey"
+            columns: ["manga_id"]
+            isOneToOne: false
+            referencedRelation: "mangas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mangas: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          image_url: string | null
+          genre: string | null
+          author: string | null
+          status: string | null
+          chapters_count: number | null
+          year: number | null
+          is_featured: boolean | null
+          read_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          image_url?: string | null
+          genre?: string | null
+          author?: string | null
+          status?: string | null
+          chapters_count?: number | null
+          year?: number | null
+          is_featured?: boolean | null
+          read_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          image_url?: string | null
+          genre?: string | null
+          author?: string | null
+          status?: string | null
+          chapters_count?: number | null
+          year?: number | null
+          is_featured?: boolean | null
+          read_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       news_posts: {
         Row: {
           author_id: string

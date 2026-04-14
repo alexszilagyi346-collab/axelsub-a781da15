@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import History from "./pages/History";
 import News from "./pages/News";
 import Manga from "./pages/Manga";
+import MangaDetail from "./pages/MangaDetail";
 import Requests from "./pages/Requests";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
           <Route path="/manga" element={<ProtectedRoute><Manga /></ProtectedRoute>} />
+          <Route path="/manga/:id" element={<ProtectedRoute><MangaDetail /></ProtectedRoute>} />
           <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

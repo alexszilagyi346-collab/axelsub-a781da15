@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { BookOpen, Search, Plus, Trash2, Edit, Star, ExternalLink, Loader2, X, Upload, Image as ImageIcon } from "lucide-react";
+import { BookOpen, Search, Plus, Trash2, Edit, Star, Loader2, X, Upload, Image as ImageIcon, Play } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -410,12 +411,10 @@ const Manga = () => {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 gap-2">
-                      {manga.read_url && (
-                        <a href={manga.read_url} target="_blank" rel="noopener noreferrer"
-                          className="flex-1 flex items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-semibold py-1.5 rounded-lg hover:bg-primary/90 transition-colors">
-                          <ExternalLink className="h-3.5 w-3.5" /> Olvasás
-                        </a>
-                      )}
+                      <Link to={`/manga/${manga.id}`}
+                        className="flex-1 flex items-center justify-center gap-1 bg-primary text-primary-foreground text-xs font-semibold py-1.5 rounded-lg hover:bg-primary/90 transition-colors">
+                        <Play className="h-3.5 w-3.5" /> Olvasás
+                      </Link>
                       {canManage && (
                         <div className="flex gap-1">
                           <button onClick={() => { setEditingManga(manga); setShowForm(false); }}
@@ -431,7 +430,9 @@ const Manga = () => {
                     </div>
                   </div>
                   <div className="p-3">
-                    <h3 className="font-semibold text-foreground text-sm truncate leading-tight">{manga.title}</h3>
+                    <Link to={`/manga/${manga.id}`}>
+                      <h3 className="font-semibold text-foreground text-sm truncate leading-tight hover:text-primary transition-colors">{manga.title}</h3>
+                    </Link>
                     {manga.author && <p className="text-xs text-muted-foreground truncate mt-0.5">{manga.author}</p>}
                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                       {manga.status && (
