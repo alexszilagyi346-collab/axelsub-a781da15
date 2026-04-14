@@ -33,7 +33,11 @@ supabase/
 npm run dev
 ```
 
-Starts the Vite dev server on port 5000.
+Starts the Express SSR server (with Vite middleware in dev mode) on port 5000. The server handles:
+- Bot/crawler requests: injects OG meta tags dynamically from Supabase
+- All other requests: served by Vite dev server with HMR
+
+For production: `npm run build` then `npm start` (serves built `dist/` via sirv).
 
 ## Environment Variables
 
