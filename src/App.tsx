@@ -14,6 +14,9 @@ import News from "./pages/News";
 import Manga from "./pages/Manga";
 import MangaDetail from "./pages/MangaDetail";
 import Requests from "./pages/Requests";
+import Shop from "./pages/Shop";
+import ShopProduct from "./pages/ShopProduct";
+import ShopAdmin from "./pages/ShopAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +38,9 @@ const App = () => (
           <Route path="/manga" element={<ProtectedRoute><Manga /></ProtectedRoute>} />
           <Route path="/manga/:id" element={<ProtectedRoute><MangaDetail /></ProtectedRoute>} />
           <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+          <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
+          <Route path="/shop/:id" element={<ProtectedRoute><ShopProduct /></ProtectedRoute>} />
+          <Route path="/shop-admin" element={<ProtectedRoute><ShopAdmin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

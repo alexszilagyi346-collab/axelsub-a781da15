@@ -6,7 +6,7 @@ import ContinueWatching from "@/components/ContinueWatching";
 import ParticleBackground from "@/components/ParticleBackground";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Link } from "react-router-dom";
-import { BookOpen, Newspaper, MessageSquare, ArrowRight } from "lucide-react";
+import { BookOpen, Newspaper, MessageSquare, ArrowRight, ShoppingBag } from "lucide-react";
 
 const Index = () => {
   return (
@@ -35,7 +35,7 @@ const Index = () => {
         {/* Quick nav cards */}
         <section className="py-8">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Link to="/manga" className="group flex items-center gap-4 p-5 rounded-2xl glass border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
                   <BookOpen className="h-6 w-6 text-primary" />
@@ -65,6 +65,17 @@ const Index = () => {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-foreground">Kérések</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Kérj új animét vagy mangát</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              </Link>
+
+              <Link to="/shop" className="group flex items-center gap-4 p-5 rounded-2xl glass border border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
+                  <ShoppingBag className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-foreground">Bolt</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Egyedi animés ajándékok</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>

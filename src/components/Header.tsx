@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen, MessageSquare } from "lucide-react";
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen, MessageSquare, ShoppingBag } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import AuthModal from "@/components/AuthModal";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useIsModerator } from "@/hooks/useIsModerator";
+import { useIsShopManager } from "@/hooks/useIsShopManager";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "sonner";
 
@@ -23,7 +24,9 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { isModerator } = useIsModerator();
+  const { isShopManager } = useIsShopManager();
   const canAccessAdmin = isAdmin || isModerator;
+  const canAccessShopAdmin = isAdmin || isShopManager;
   const { data: siteSettings } = useSiteSettings();
   const navigate = useNavigate();
 
@@ -124,6 +127,26 @@ const Header = () => {
                 </span>
               </Link>
 
+              {/* Bolt */}
+              <Link
+                to="/shop"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all duration-200"
+              >
+                <span className="flex items-center gap-1.5">
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Bolt
+                </span>
+              </Link>
+
+              {canAccessShopAdmin && !canAccessAdmin && (
+                <Link
+                  to="/shop-admin"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-all"
+                >
+                  Bolt Panel
+                </Link>
+              )}
+
               {canAccessAdmin && (
                 <Link
                   to="/admin"
@@ -179,6 +202,11 @@ const Header = () => {
                     <DropdownMenuItem onClick={() => navigate("/history")}>
                       <History className="h-4 w-4 mr-2" /> Előzmények
                     </DropdownMenuItem>
+                    {canAccessShopAdmin && (
+                      <DropdownMenuItem onClick={() => navigate("/shop-admin")}>
+                        <ShoppingBag className="h-4 w-4 mr-2" /> Bolt Panel
+                      </DropdownMenuItem>
+                    )}
                     {canAccessAdmin && (
                       <DropdownMenuItem onClick={() => navigate("/admin")}>
                         <Settings className="h-4 w-4 mr-2" /> {isAdmin ? "Admin Panel" : "Moderátor Panel"}
@@ -267,6 +295,26 @@ const Header = () => {
               >
                 Kérések
               </Link>
+
+              <Link
+                to="/shop"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" /> Bolt
+                </span>
+              </Link>
+
+              {canAccessShopAdmin && (
+                <Link
+                  to="/shop-admin"
+                  className="block py-2 px-3 rounded-lg text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Bolt Panel
+                </Link>
+              )}
 
               {canAccessAdmin && (
                 <Link
