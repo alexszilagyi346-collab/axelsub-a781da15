@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useIsShopManager } from "@/hooks/useIsShopManager";
 import {
   useShopProducts, useShopOrders, useShopSettings, useShopManagers,
@@ -266,9 +266,10 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
 
 // ---- Main ShopAdmin ----
 const ShopAdmin = () => {
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { isShopManager, loading: shopLoading } = useIsShopManager();
-  const loading = adminLoading || shopLoading;
+  const loading = authLoading || adminLoading || shopLoading;
   const canAccess = isAdmin || isShopManager;
 
   const [tab, setTab] = useState<Tab>("products");
@@ -291,12 +292,25 @@ const ShopAdmin = () => {
   const [settingsForm, setSettingsForm] = useState<any>(null);
 
   if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="flex items-center justify-center pt-48">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     </div>
   );
 
-  if (!canAccess) return <Navigate to="/" replace />;
+  if (!user || !canAccess) return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="pt-24 pb-12">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-3xl font-bold text-foreground mb-4">Hozzáférés megtagadva</h1>
+          <p className="text-muted-foreground">Nincs admin vagy bolt-kezelő jogosultságod.</p>
+        </div>
+      </main>
+    </div>
+  );
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "products", label: "Termékek", icon: <Package className="h-4 w-4" /> },
