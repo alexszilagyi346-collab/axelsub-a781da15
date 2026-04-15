@@ -10,6 +10,7 @@ A Hungarian anime streaming platform with subtitles ("Magyar feliratú animék e
 - **Data Fetching**: TanStack React Query
 - **Routing**: React Router DOM v6
 - **Forms**: React Hook Form + Zod
+- **Server**: Express (Node.js) for SSR/OG tag injection
 
 ## Project Structure
 
@@ -22,9 +23,11 @@ src/
   integrations/
     supabase/      - Supabase client and auto-generated types
   types/           - TypeScript type definitions
+server/
+  index.mjs        - Express server: handles bot/crawler OG tag injection + serves Vite in dev
 supabase/
-  migrations/      - Database schema SQL migrations (applied to Supabase project)
-  functions/       - Supabase Edge Functions (og-image)
+  migrations/      - Database schema SQL migrations (applied to the Supabase project)
+  functions/       - Supabase Edge Functions (og-image — deployed separately to Supabase)
 ```
 
 ## Running the App
@@ -34,16 +37,16 @@ npm run dev
 ```
 
 Starts the Express SSR server (with Vite middleware in dev mode) on port 5000. The server handles:
-- Bot/crawler requests: injects OG meta tags dynamically from Supabase
+- Bot/crawler requests (Facebook, Discord, Twitter, etc.): injects OG meta tags dynamically fetched from Supabase
 - All other requests: served by Vite dev server with HMR
 
 For production: `npm run build` then `npm start` (serves built `dist/` via sirv).
 
 ## Environment Variables
 
-Set in Replit's environment system (shared):
+Set in Replit's environment system (shared) — do not hardcode these:
 - `VITE_SUPABASE_URL` - Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key (safe to expose in browser)
 - `VITE_SUPABASE_PROJECT_ID` - Supabase project ID
 
 ## Key Features
@@ -56,16 +59,21 @@ Set in Replit's environment system (shared):
 - Comment system with replies
 - Ratings (1-10 scale)
 - Notifications & subscriptions
-- Admin panel (role-based access)
+- Admin panel (role-based access: admin, moderator, shop_manager)
+- Manga reader with chapters
+- Anime/episode request system
+- Shop (products, orders, settings)
 - News posts
 - Site settings management
 
 ## Database
 
-Managed by Supabase. Schema defined in `supabase/migrations/`. Tables include:
-`animes`, `episodes`, `profiles`, `user_roles`, `watch_history`, `favorites`, `watchlist`, `comments`, `ratings`, `notifications`, `anime_subscriptions`, `news_posts`, `site_settings`
+Managed by Supabase. Schema defined in `supabase/migrations/`. Key tables:
+`animes`, `episodes`, `profiles`, `user_roles`, `watch_history`, `favorites`, `watchlist`,
+`comments`, `ratings`, `notifications`, `anime_subscriptions`, `news_posts`, `site_settings`,
+`mangas`, `manga_chapters`, `anime_requests`, `shop_products`, `shop_orders`, `shop_order_items`, `shop_settings`
 
 ## Deployment
 
 Build: `npm run build` → outputs to `dist/`
-The app is a static SPA — deploy as a static site.
+Start: `npm start` → runs Express server serving the built files
