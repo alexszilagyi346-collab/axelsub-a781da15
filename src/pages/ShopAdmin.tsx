@@ -266,8 +266,9 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
 
 // ---- Main ShopAdmin ----
 const ShopAdmin = () => {
-  const { isAdmin } = useIsAdmin();
-  const { isShopManager, loading } = useIsShopManager();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isShopManager, loading: shopLoading } = useIsShopManager();
+  const loading = adminLoading || shopLoading;
   const canAccess = isAdmin || isShopManager;
 
   const [tab, setTab] = useState<Tab>("products");
