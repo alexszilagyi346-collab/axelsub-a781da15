@@ -33,6 +33,22 @@ export const useFeaturedAnimes = () => {
   });
 };
 
+export const usePopularAnimes = (limit: number = 14) => {
+  return useQuery({
+    queryKey: ["popular-animes", limit],
+    queryFn: async (): Promise<Anime[]> => {
+      const { data, error } = await supabase
+        .from("animes")
+        .select("*")
+        .order("view_count" as any, { ascending: false, nullsFirst: false })
+        .order("last_episode_at", { ascending: false, nullsFirst: false })
+        .limit(limit);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};
+
 export const useLatestAnimes = (limit: number = 12) => {
   return useQuery({
     queryKey: ["latest-animes", limit],

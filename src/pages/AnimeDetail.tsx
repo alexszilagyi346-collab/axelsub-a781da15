@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { extractIdFromSlug } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -44,6 +44,12 @@ const AnimeDetail = () => {
     },
     enabled: !!id,
   });
+
+  // Increment view count once per visit
+  useEffect(() => {
+    if (!id) return;
+    supabase.rpc("increment_anime_view", { p_anime_id: id }).then(() => {});
+  }, [id]);
 
   const prevEpisodeInfo = useMemo(() => {
     if (!selectedEpisode || episodes.length === 0) return null;
