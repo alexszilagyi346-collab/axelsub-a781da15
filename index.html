@@ -18,6 +18,12 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="AxelSub - Anime" />
     <meta name="twitter:image" content="https://axelsub.lovable.app/favicon.png" />
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search).get('p');
+        if (p) window.history.replaceState(null, null, decodeURIComponent(p));
+      })();
+    </script>
   </head>
 
   <body>
