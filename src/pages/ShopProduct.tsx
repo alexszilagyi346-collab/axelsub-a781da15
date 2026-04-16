@@ -160,8 +160,9 @@ const ShopProduct = () => {
         });
       } catch { /* email hiba nem akadályozza meg a rendelést */ }
       setStep("success");
-    } catch {
-      toast.error("Hiba a rendelés leadásakor");
+    } catch (err: any) {
+      console.error("Order error:", err);
+      toast.error(err?.message || "Hiba a rendelés leadásakor");
     }
   };
 

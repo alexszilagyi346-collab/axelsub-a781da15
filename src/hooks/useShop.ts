@@ -156,18 +156,16 @@ export const usePlaceOrder = () => {
       order: Omit<ShopOrder, "id" | "created_at" | "updated_at" | "shop_order_items">;
       items: Omit<ShopOrderItem, "id" | "order_id">[];
     }) => {
-      const { data: orderData, error: orderError } = await supabase
+      const orderId = crypto.randomUUID();
+      const { error: orderError } = await supabase
         .from("shop_orders" as any)
-        .insert(order)
-        .select()
-        .single();
+        .insert({ ...order, id: orderId });
       if (orderError) throw orderError;
-      const orderId = (orderData as ShopOrder).id;
       const { error: itemsError } = await supabase
         .from("shop_order_items" as any)
         .insert(items.map((item) => ({ ...item, order_id: orderId })));
       if (itemsError) throw itemsError;
-      return orderData as ShopOrder;
+      return { id: orderId, ...order } as unknown as ShopOrder;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shop_orders"] });
