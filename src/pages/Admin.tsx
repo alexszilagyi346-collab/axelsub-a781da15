@@ -338,7 +338,7 @@ const Admin = () => {
         toast.success("Anime sikeresen hozzáadva!");
       }
 
-      setFormData({ title: "", description: "", genre: "", year: "", is_featured: false, video_url: "", image_url: "" });
+      setFormData({ title: "", description: "", genre: "", year: "", status: "ongoing", is_featured: false, video_url: "", image_url: "" });
       setImageFile(null);
       setImagePreview(null);
       setEditingAnime(null);

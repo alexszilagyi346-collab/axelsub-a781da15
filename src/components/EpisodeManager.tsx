@@ -20,6 +20,7 @@ interface Episode {
   ed_start: string | null;
   ed_end: string | null;
   backup_video_url: string | null;
+  quality_360p: string | null;
   quality_480p: string | null;
   quality_720p: string | null;
   quality_1080p: string | null;
@@ -36,6 +37,7 @@ interface EpisodeFormData {
   ed_start: string;
   ed_end: string;
   backup_video_url: string;
+  quality_360p: string;
   quality_480p: string;
   quality_720p: string;
   quality_1080p: string;
@@ -61,6 +63,7 @@ const getEmptyFormData = (episodeNumber: number = 1): EpisodeFormData => ({
   ed_start: "",
   ed_end: "",
   backup_video_url: "",
+  quality_360p: "",
   quality_480p: "",
   quality_720p: "",
   quality_1080p: "",
@@ -87,6 +90,7 @@ const episodeToFormData = (episode: Episode): EpisodeFormData => ({
   ed_start: episode.ed_start || "",
   ed_end: episode.ed_end || "",
   backup_video_url: episode.backup_video_url || "",
+  quality_360p: episode.quality_360p || "",
   quality_480p: episode.quality_480p || "",
   quality_720p: episode.quality_720p || "",
   quality_1080p: episode.quality_1080p || "",
@@ -177,6 +181,7 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
         ed_start: episode.ed_start.trim() || null,
         ed_end: episode.ed_end.trim() || null,
         backup_video_url: episode.backup_video_url.trim() || null,
+        quality_360p: episode.quality_360p.trim() || null,
         quality_480p: episode.quality_480p.trim() || null,
         quality_720p: episode.quality_720p.trim() || null,
         quality_1080p: episode.quality_1080p.trim() || null,
@@ -209,6 +214,7 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
           ed_start: data.ed_start.trim() || null,
           ed_end: data.ed_end.trim() || null,
           backup_video_url: data.backup_video_url.trim() || null,
+          quality_360p: data.quality_360p.trim() || null,
           quality_480p: data.quality_480p.trim() || null,
           quality_720p: data.quality_720p.trim() || null,
           quality_1080p: data.quality_1080p.trim() || null,
@@ -565,7 +571,7 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
             {/* Quality URLs */}
             <div className="space-y-2">
               <Label className="text-primary">Minőség beállítások</Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">1080p URL</Label>
                   <Input
@@ -593,6 +599,16 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
                     value={data.quality_480p}
                     onChange={(e) => setData({ ...data, quality_480p: e.target.value })}
                     placeholder="480p URL"
+                    className="bg-background text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">360p URL</Label>
+                  <Input
+                    type="url"
+                    value={data.quality_360p}
+                    onChange={(e) => setData({ ...data, quality_360p: e.target.value })}
+                    placeholder="360p URL"
                     className="bg-background text-sm"
                   />
                 </div>
