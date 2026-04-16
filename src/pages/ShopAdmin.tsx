@@ -61,9 +61,9 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `shop/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("animek").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("shop").upload(path, file, { upsert: true });
     if (error) { toast.error("Feltöltési hiba: " + error.message); setUploading(false); return; }
-    const { data } = supabase.storage.from("animek").getPublicUrl(path);
+    const { data } = supabase.storage.from("shop").getPublicUrl(path);
     setForm((f) => ({ ...f, images: [...(f.images || []), data.publicUrl] }));
     setUploading(false);
   };
