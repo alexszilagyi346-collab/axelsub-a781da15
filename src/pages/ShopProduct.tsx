@@ -28,7 +28,25 @@ const ShopProduct = () => {
   const [imageIdx, setImageIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [customNote, setCustomNote] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
   const [step, setStep] = useState<Step>("details");
+
+  const isClothing = product ? ["póló", "pulóver"].includes(product.category) : false;
+  const isMug = product?.category === "bögre";
+  const needsSize = isClothing || isMug;
+
+  const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
+  const MUG_SIZES = ["250 ml", "450 ml"];
+  const sizeOptions = isClothing ? CLOTHING_SIZES : isMug ? MUG_SIZES : [];
+
+  const buildVariantNote = () => {
+    const parts: string[] = [];
+    if (selectedSize) parts.push(`Méret: ${selectedSize}`);
+    if (selectedGender) parts.push(`Típus: ${selectedGender}`);
+    if (customNote.trim()) parts.push(customNote.trim());
+    return parts.join(" | ");
+  };
 
   const [form, setForm] = useState({
     name: "",
@@ -91,6 +109,18 @@ const ShopProduct = () => {
     return Object.keys(e).length === 0;
   };
 
+  const handleDetailsNext = () => {
+    if (needsSize && !selectedSize) {
+      toast.error("Kérjük válassz méretet!");
+      return;
+    }
+    if (isClothing && !selectedGender) {
+      toast.error("Kérjük válassz típust (Férfi / Női)!");
+      return;
+    }
+    setStep("order");
+  };
+
   const handleOrder = async () => {
     if (!validate()) return;
     try {
@@ -108,13 +138,14 @@ const ShopProduct = () => {
         total_price: total,
         note: form.note || null,
       };
+      const variantNote = buildVariantNote();
       const orderItems = [
         {
           product_id: product.id,
           product_name: product.name,
           product_price: product.price,
           quantity,
-          custom_note: customNote || null,
+          custom_note: variantNote || null,
         },
       ];
       await placeOrder.mutateAsync({
@@ -243,6 +274,46 @@ const ShopProduct = () => {
                     <p className="text-muted-foreground leading-relaxed">{product.description}</p>
                   )}
 
+                  {/* Gender picker - clothing only */}
+                  {isClothing && (
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">Típus *</Label>
+                      <div className="flex gap-3">
+                        {["Férfi", "Női"].map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setSelectedGender(g)}
+                            className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${selectedGender === g ? "border-primary bg-primary/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-primary/40"}`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Size picker */}
+                  {needsSize && (
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">
+                        {isMug ? "Méret *" : "Ruhaméret *"}
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {sizeOptions.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSelectedSize(s)}
+                            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${selectedSize === s ? "border-primary bg-primary/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-primary/40"}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Shipping info */}
                   <div className="glass border border-border/40 rounded-xl p-4 text-sm space-y-2">
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -308,8 +379,20 @@ const ShopProduct = () => {
                     </div>
                   </div>
 
+                  {/* Selected variant summary */}
+                  {(selectedSize || selectedGender) && (
+                    <div className="glass border border-primary/20 rounded-xl px-4 py-3 text-sm flex flex-wrap gap-3">
+                      {selectedGender && (
+                        <span className="text-muted-foreground">Típus: <span className="text-foreground font-medium">{selectedGender}</span></span>
+                      )}
+                      {selectedSize && (
+                        <span className="text-muted-foreground">Méret: <span className="text-foreground font-medium">{selectedSize}</span></span>
+                      )}
+                    </div>
+                  )}
+
                   <Button
-                    onClick={() => product.in_stock && setStep("order")}
+                    onClick={() => product.in_stock && handleDetailsNext()}
                     disabled={!product.in_stock}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground neon-glow font-bold py-6 text-base"
                   >
@@ -437,7 +520,11 @@ const ShopProduct = () => {
                   {/* Summary */}
                   <div className="glass border border-primary/20 rounded-xl p-4 space-y-1.5 text-sm">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>{product.name} × {quantity}</span>
+                      <span>
+                        {product.name} × {quantity}
+                        {selectedGender && <span className="text-foreground"> · {selectedGender}</span>}
+                        {selectedSize && <span className="text-foreground"> · {selectedSize}</span>}
+                      </span>
                       <span>{formatPrice(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
