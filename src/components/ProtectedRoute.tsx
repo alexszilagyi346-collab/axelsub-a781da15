@@ -13,13 +13,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   useEffect(() => {
     if (!loading && !user) {
       setShowAuthModal(true);
+    } else if (user) {
+      setShowAuthModal(false);
     }
   }, [loading, user]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
       </div>
     );
   }
@@ -28,13 +30,13 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Bejelentkezés szükséges</h1>
-          <p className="text-muted-foreground mb-4">Az oldal megtekintéséhez be kell jelentkezned.</p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Bejelentkezés szükséges</h1>
+          <p className="text-muted-foreground">Az oldal megtekintéséhez be kell jelentkezned.</p>
         </div>
-        <AuthModal 
-          isOpen={showAuthModal} 
-          onClose={() => setShowAuthModal(true)} 
-          defaultMode="signin" 
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          defaultMode="signin"
         />
       </div>
     );
