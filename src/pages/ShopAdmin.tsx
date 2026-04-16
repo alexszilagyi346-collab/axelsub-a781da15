@@ -61,10 +61,18 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `shop/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("shop").upload(path, file, { upsert: true });
-    if (error) { toast.error("Feltöltési hiba: " + error.message); setUploading(false); return; }
-    const { data } = supabase.storage.from("shop").getPublicUrl(path);
-    setForm((f) => ({ ...f, images: [...(f.images || []), data.publicUrl] }));
+    const buckets = ["shop", "animek"];
+    let publicUrl: string | null = null;
+    for (const bucket of buckets) {
+      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+      if (!error) {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+        publicUrl = data.publicUrl;
+        break;
+      }
+    }
+    if (!publicUrl) { toast.error("Feltöltési hiba: egyik bucket sem elérhető."); setUploading(false); return; }
+    setForm((f) => ({ ...f, images: [...(f.images || []), publicUrl!] }));
     setUploading(false);
   };
 
