@@ -26,7 +26,7 @@ const Header = () => {
   const { isModerator } = useIsModerator();
   const { isShopManager } = useIsShopManager();
   const canAccessAdmin = isAdmin || isModerator;
-  const canAccessShopAdmin = isAdmin || isModerator || isShopManager;
+  const canAccessShopAdmin = isAdmin || isShopManager;
   const { data: siteSettings } = useSiteSettings();
   const navigate = useNavigate();
 

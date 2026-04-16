@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
-import { useIsModerator } from "@/hooks/useIsModerator";
 import { useIsShopManager } from "@/hooks/useIsShopManager";
 import {
   useShopProducts, useShopOrders, useShopSettings, useShopManagers,
@@ -61,9 +60,9 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `shop/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("shop").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("animek").upload(path, file, { upsert: true });
     if (error) { toast.error("Feltöltési hiba: " + error.message); setUploading(false); return; }
-    const { data } = supabase.storage.from("shop").getPublicUrl(path);
+    const { data } = supabase.storage.from("animek").getPublicUrl(path);
     setForm((f) => ({ ...f, images: [...(f.images || []), data.publicUrl] }));
     setUploading(false);
   };
@@ -269,10 +268,9 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
 const ShopAdmin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { isModerator, loading: modLoading } = useIsModerator();
   const { isShopManager, loading: shopLoading } = useIsShopManager();
-  const loading = authLoading || adminLoading || modLoading || shopLoading;
-  const canAccess = isAdmin || isModerator || isShopManager;
+  const loading = authLoading || adminLoading || shopLoading;
+  const canAccess = isAdmin || isShopManager;
 
   const [tab, setTab] = useState<Tab>("products");
   const [editProduct, setEditProduct] = useState<Partial<ShopProduct> | null>(null);
