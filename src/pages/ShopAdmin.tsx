@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { useIsModerator } from "@/hooks/useIsModerator";
 import { useIsShopManager } from "@/hooks/useIsShopManager";
 import {
   useShopProducts, useShopOrders, useShopSettings, useShopManagers,
@@ -268,9 +269,10 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
 const ShopAdmin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isModerator, loading: modLoading } = useIsModerator();
   const { isShopManager, loading: shopLoading } = useIsShopManager();
-  const loading = authLoading || adminLoading || shopLoading;
-  const canAccess = isAdmin || isShopManager;
+  const loading = authLoading || adminLoading || modLoading || shopLoading;
+  const canAccess = isAdmin || isModerator || isShopManager;
 
   const [tab, setTab] = useState<Tab>("products");
   const [editProduct, setEditProduct] = useState<Partial<ShopProduct> | null>(null);
