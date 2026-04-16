@@ -8,7 +8,7 @@ import {
   useShopProducts, useShopOrders, useShopSettings, useShopManagers,
   useUpsertProduct, useDeleteProduct, useUpdateOrderStatus, useUpdateCourier,
   useUpdateShopSettings, useGrantShopManager, useRevokeShopManager,
-  ShopProduct, ShopOrder,
+  ShopProduct, ShopOrder, ShopManager,
 } from "@/hooks/useShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -687,13 +687,24 @@ const ShopAdmin = () => {
               <div className="glass border border-border/40 rounded-2xl p-6 space-y-3">
                 <h3 className="font-bold text-foreground">Jelenlegi bolt-kezelők</h3>
                 {managers && managers.length > 0 ? (
-                  managers.map((m) => (
+                  (managers as ShopManager[]).map((m) => (
                     <div key={m.user_id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                      <div>
-                        <p className="text-sm font-mono text-foreground">{m.user_id}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Hozzáadva: {new Date(m.created_at).toLocaleDateString("hu-HU")}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {m.avatar_url ? (
+                          <img src={m.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-border/50" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-primary/10 border border-border/50 flex items-center justify-center">
+                            <Users className="h-4 w-4 text-primary/60" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {m.display_name || <span className="text-muted-foreground font-mono text-xs">{m.user_id.slice(0, 16)}…</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Hozzáadva: {new Date(m.created_at).toLocaleDateString("hu-HU")}
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => {

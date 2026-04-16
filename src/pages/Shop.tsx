@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import { useShopProducts, useShopSettings } from "@/hooks/useShop";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Search, Tag, Package, ArrowLeft, ChevronRight } from "lucide-react";
+import { ShoppingBag, Search, Tag, Package, ArrowLeft, ChevronRight, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import ParticleBackground from "@/components/ParticleBackground";
@@ -84,6 +84,8 @@ const Shop = () => {
     ? `${activeFilter.collection || "Egyéb"} – ${CAT_LABELS[activeFilter.category] || activeFilter.category}`
     : "";
 
+  const shopClosed = settings !== undefined && settings !== null && !settings.shop_open;
+
   return (
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
@@ -91,7 +93,27 @@ const Shop = () => {
       <main className="pt-24 pb-16 relative z-10">
         <div className="container mx-auto px-4">
 
+          {/* Shop Closed Banner */}
+          {shopClosed && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center py-32 text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+                <Lock className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h1 className="text-3xl font-black text-foreground mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                A bolt jelenleg zárva van
+              </h1>
+              <p className="text-muted-foreground max-w-sm">
+                Hamarosan visszatérünk! Kövesd az oldalunkat az aktuális információkért.
+              </p>
+            </motion.div>
+          )}
+
           {/* Hero */}
+          {!shopClosed && <>
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-3 mb-4">
               <ShoppingBag className="h-8 w-8 text-primary" />
@@ -222,6 +244,7 @@ const Shop = () => {
               )}
             </div>
           )}
+          </>}
 
         </div>
       </main>

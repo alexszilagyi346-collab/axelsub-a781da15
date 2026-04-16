@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ShoppingBag, Truck, CreditCard, Package, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Truck, CreditCard, Package, CheckCircle2, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ParticleBackground from "@/components/ParticleBackground";
@@ -82,6 +82,26 @@ const ShopProduct = () => {
         <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
         <p className="text-xl">Termék nem található</p>
         <Link to="/shop"><Button className="mt-4">Vissza a boltba</Button></Link>
+      </div>
+    </div>
+  );
+
+  const shopClosed = settings !== undefined && settings !== null && !settings.shop_open;
+  if (shopClosed) return (
+    <div className="min-h-screen bg-background">
+      <ParticleBackground />
+      <Header />
+      <div className="flex flex-col items-center justify-center pt-40 text-center relative z-10 px-4">
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+          <Lock className="h-10 w-10 text-muted-foreground" />
+        </div>
+        <h1 className="text-3xl font-black text-foreground mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          A bolt jelenleg zárva van
+        </h1>
+        <p className="text-muted-foreground max-w-sm mb-6">
+          Hamarosan visszatérünk! Kövesd az oldalunkat az aktuális információkért.
+        </p>
+        <Link to="/shop"><Button variant="outline">Vissza a boltba</Button></Link>
       </div>
     </div>
   );

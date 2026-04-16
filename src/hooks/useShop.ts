@@ -243,16 +243,38 @@ export const useUpdateShopSettings = () => {
 };
 
 // --- Shop Managers ---
+export interface ShopManager {
+  user_id: string;
+  created_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
 export const useShopManagers = () =>
   useQuery({
     queryKey: ["shop_managers"],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<ShopManager[]> => {
+      const { data: roles, error } = await supabase
         .from("user_roles" as any)
         .select("user_id, created_at")
         .eq("role", "shop_manager");
       if (error) throw error;
-      return (data as { user_id: string; created_at: string }[]) || [];
+      if (!roles || roles.length === 0) return [];
+
+      const userIds = (roles as { user_id: string; created_at: string }[]).map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", userIds);
+
+      const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+
+      return (roles as { user_id: string; created_at: string }[]).map((r) => ({
+        user_id: r.user_id,
+        created_at: r.created_at,
+        display_name: profileMap.get(r.user_id)?.display_name ?? null,
+        avatar_url: profileMap.get(r.user_id)?.avatar_url ?? null,
+      }));
     },
   });
 
