@@ -87,7 +87,13 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
       <div>
         <Label>Termék neve *</Label>
         <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="mt-1 glass border-border/50" placeholder="Pl. Dragon Ball Z bögre" />
+          className="mt-1 glass border-border/50" placeholder="Pl. Tanjiro póló" />
+      </div>
+      <div>
+        <Label>Sorozat / Gyűjtemény</Label>
+        <Input value={(form as any).collection || ""} onChange={(e) => setForm({ ...form, collection: e.target.value } as any)}
+          className="mt-1 glass border-border/50" placeholder="Pl. Demon Slayer, Dragon Ball, One Piece..." />
+        <p className="text-xs text-muted-foreground mt-1">Ezzel kerül egy csoportba a többi azonos sorozatú termék</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>

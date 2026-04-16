@@ -9,6 +9,7 @@ export interface ShopProduct {
   price: number;
   images: string[];
   category: string;
+  collection: string | null;
   in_stock: boolean;
   stock_count: number | null;
   created_at: string;
