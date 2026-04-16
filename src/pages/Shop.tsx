@@ -202,22 +202,7 @@ const Shop = () => {
                     transition={{ duration: 0.2 }}
                     className="space-y-10"
                   >
-                    {/* Group by category when "Mind" is selected */}
-                    {categoryTab === "Mind"
-                      ? CATEGORIES.filter((c) => c !== "Mind").map((cat) => {
-                          const groups = groupedByCollection.filter((g) => g.category === cat);
-                          if (groups.length === 0) return null;
-                          return (
-                            <div key={cat}>
-                              <h2 className="text-xl font-black text-foreground mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                                {CAT_LABELS[cat] || cat}
-                              </h2>
-                              <CollectionGrid groups={groups} onSelect={setActiveFilter} />
-                            </div>
-                          );
-                        })
-                      : <CollectionGrid groups={groupedByCollection} onSelect={setActiveFilter} />
-                    }
+                    <CollectionGrid groups={groupedByCollection} onSelect={setActiveFilter} />
                   </motion.div>
                 </AnimatePresence>
               )}
