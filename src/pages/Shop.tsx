@@ -56,7 +56,8 @@ const Shop = () => {
   const groupedByCollection = useMemo(() => {
     const groups: Record<string, { category: string; collection: string; products: typeof allProducts }> = {};
     filteredByCategory.forEach((p) => {
-      const col = p.collection?.trim() || "";
+      // Ha nincs collection megadva, a termék neve lesz a csoport neve
+      const col = p.collection?.trim() || p.name;
       const key = `${p.category}__${col}`;
       if (!groups[key]) {
         groups[key] = { category: p.category, collection: col, products: [] };
@@ -74,7 +75,7 @@ const Shop = () => {
     return allProducts.filter(
       (p) =>
         p.category === activeFilter.category &&
-        (p.collection?.trim() || "") === activeFilter.collection
+        (p.collection?.trim() || p.name) === activeFilter.collection
     );
   }, [allProducts, activeFilter]);
 
