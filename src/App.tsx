@@ -40,8 +40,8 @@ const App = () => (
             <Route path="/manga" element={<ProtectedRoute><Manga /></ProtectedRoute>} />
             <Route path="/manga/:id" element={<ProtectedRoute><MangaDetail /></ProtectedRoute>} />
             <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
-            <Route path="/shop" element={<ProtectedRoute><Shop /></ProtectedRoute>} />
-            <Route path="/shop/:id" element={<ProtectedRoute><ShopProduct /></ProtectedRoute>} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/shop/:id" element={<ShopProduct />} />
             <Route path="/shop-admin" element={<ProtectedRoute><ShopAdmin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
