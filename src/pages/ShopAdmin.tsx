@@ -6,7 +6,7 @@ import { useIsModerator } from "@/hooks/useIsModerator";
 import { useIsShopManager } from "@/hooks/useIsShopManager";
 import {
   useShopProducts, useShopOrders, useShopSettings, useShopManagers,
-  useUpsertProduct, useDeleteProduct, useUpdateOrderStatus,
+  useUpsertProduct, useDeleteProduct, useUpdateOrderStatus, useUpdateCourier,
   useUpdateShopSettings, useGrantShopManager, useRevokeShopManager,
   ShopProduct, ShopOrder,
 } from "@/hooks/useShop";
@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Package, ShoppingBag, Settings, Users, Plus, Pencil, Trash2,
-  ChevronDown, ChevronUp, Eye, X, Check, Image, Loader2
+  ChevronDown, ChevronUp, Eye, X, Check, Image, Loader2, Truck, Mail, Phone
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -178,7 +178,9 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
 // ---- Order Row ----
 const OrderRow = ({ order }: { order: ShopOrder }) => {
   const [open, setOpen] = useState(false);
+  const [courierInput, setCourierInput] = useState(order.courier || "");
   const updateStatus = useUpdateOrderStatus();
+  const updateCourier = useUpdateCourier();
   const statuses = Object.keys(STATUS_LABELS);
 
   return (
@@ -190,14 +192,26 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-foreground text-sm">{order.customer_name}</span>
-            <span className="text-muted-foreground text-xs">{order.customer_email}</span>
             <Badge className={`text-xs border ${STATUS_LABELS[order.status]?.color || ""}`}>
               {STATUS_LABELS[order.status]?.label || order.status}
             </Badge>
+            {order.courier && (
+              <span className="flex items-center gap-1 text-xs text-purple-400">
+                <Truck className="h-3 w-3" />{order.courier}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
             <span>{new Date(order.created_at).toLocaleString("hu-HU")}</span>
             <span className="text-primary font-medium">{formatPrice(order.total_price)}</span>
+            <a href={`mailto:${order.customer_email}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition-colors">
+              <Mail className="h-3 w-3" />{order.customer_email}
+            </a>
+            {order.customer_phone && (
+              <a href={`tel:${order.customer_phone}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition-colors">
+                <Phone className="h-3 w-3" />{order.customer_phone}
+              </a>
+            )}
           </div>
         </div>
         {open ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
@@ -207,8 +221,17 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
         <div className="px-4 pb-4 border-t border-border/30 pt-4 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
             <div>
+              <p className="text-muted-foreground text-xs">Email</p>
+              <a href={`mailto:${order.customer_email}`} className="text-primary hover:underline flex items-center gap-1">
+                <Mail className="h-3 w-3" />{order.customer_email}
+              </a>
+            </div>
+            <div>
               <p className="text-muted-foreground text-xs">Telefon</p>
-              <p className="text-foreground">{order.customer_phone || "–"}</p>
+              {order.customer_phone
+                ? <a href={`tel:${order.customer_phone}`} className="text-primary hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{order.customer_phone}</a>
+                : <p className="text-foreground">–</p>
+              }
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Szállítás</p>
@@ -248,6 +271,28 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
               </div>
             </div>
           )}
+
+          {/* Courier */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Truck className="h-3 w-3" /> Futár / nyomkövetési szám:</p>
+            <div className="flex gap-2">
+              <Input
+                value={courierInput}
+                onChange={(e) => setCourierInput(e.target.value)}
+                placeholder="Pl. GLS, MPL, 1Z999AA..."
+                className="glass border-border/50 text-sm"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updateCourier.isPending || courierInput === (order.courier || "")}
+                onClick={() => updateCourier.mutate({ id: order.id, courier: courierInput })}
+                className="border-border/50"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
           {/* Status change */}
           <div>

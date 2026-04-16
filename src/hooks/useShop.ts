@@ -39,6 +39,7 @@ export interface ShopOrder {
   status: string;
   total_price: number;
   note: string | null;
+  courier: string | null;
   created_at: string;
   updated_at: string;
   shop_order_items?: ShopOrderItem[];
@@ -187,6 +188,24 @@ export const useUpdateOrderStatus = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shop_orders"] });
       toast.success("Státusz frissítve!");
+    },
+    onError: (e: any) => toast.error(e.message || "Hiba"),
+  });
+};
+
+export const useUpdateCourier = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, courier }: { id: string; courier: string }) => {
+      const { error } = await supabase
+        .from("shop_orders" as any)
+        .update({ courier, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shop_orders"] });
+      toast.success("Futár mentve!");
     },
     onError: (e: any) => toast.error(e.message || "Hiba"),
   });

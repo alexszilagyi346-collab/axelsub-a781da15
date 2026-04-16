@@ -94,31 +94,40 @@ const ShopProduct = () => {
   const handleOrder = async () => {
     if (!validate()) return;
     try {
-      await placeOrder.mutateAsync({
-        order: {
-          user_id: user?.id || null,
-          customer_name: form.name,
-          customer_email: form.email,
-          customer_phone: form.phone,
-          shipping_address: form.address || "Személyes átvétel",
-          shipping_city: form.city || "–",
-          shipping_zip: form.zip || "–",
-          shipping_method: form.shipping,
-          payment_method: form.payment,
-          status: "pending",
-          total_price: total,
-          note: form.note || null,
+      const orderPayload = {
+        user_id: user?.id || null,
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        shipping_address: form.address || "Személyes átvétel",
+        shipping_city: form.city || "–",
+        shipping_zip: form.zip || "–",
+        shipping_method: form.shipping,
+        payment_method: form.payment,
+        status: "pending",
+        total_price: total,
+        note: form.note || null,
+      };
+      const orderItems = [
+        {
+          product_id: product.id,
+          product_name: product.name,
+          product_price: product.price,
+          quantity,
+          custom_note: customNote || null,
         },
-        items: [
-          {
-            product_id: product.id,
-            product_name: product.name,
-            product_price: product.price,
-            quantity,
-            custom_note: customNote || null,
-          },
-        ],
+      ];
+      await placeOrder.mutateAsync({
+        order: orderPayload,
+        items: orderItems,
       });
+      try {
+        await fetch("/api/order-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload, items: orderItems }),
+        });
+      } catch { /* email hiba nem akadályozza meg a rendelést */ }
       setStep("success");
     } catch {
       toast.error("Hiba a rendelés leadásakor");

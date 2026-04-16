@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodemailer from "nodemailer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -102,6 +103,86 @@ async function createServer() {
       next(err);
     }
   }
+
+  app.use(express.json());
+
+  const NOTIFY_EMAILS = ["alexszilagyi26@gmail.com", "davidbotos1998@gmail.com"];
+
+  const getTransporter = () => {
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    if (!user || !pass) return null;
+    return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
+  };
+
+  const formatHuf = (n) =>
+    new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
+
+  app.post("/api/order-notify", async (req, res) => {
+    try {
+      const { order, items } = req.body;
+      const transporter = getTransporter();
+      if (!transporter) return res.json({ ok: false, reason: "SMTP not configured" });
+
+      const itemsHtml = (items || []).map(
+        (i) => `<tr>
+          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a">${i.product_name} × ${i.quantity}${i.custom_note ? ` <em>(${i.custom_note})</em>` : ""}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a;text-align:right">${formatHuf(i.product_price * i.quantity)}</td>
+        </tr>`
+      ).join("");
+
+      const html = `
+        <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px">
+          <h2 style="color:#a78bfa;margin-top:0">🛍️ Új rendelés érkezett – AxelSub Shop</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+            <tr><td style="padding:4px 0;color:#94a3b8;width:140px">Rendelő neve:</td><td><strong>${order.customer_name}</strong></td></tr>
+            <tr><td style="padding:4px 0;color:#94a3b8">Email:</td><td><a href="mailto:${order.customer_email}" style="color:#a78bfa">${order.customer_email}</a></td></tr>
+            <tr><td style="padding:4px 0;color:#94a3b8">Telefon:</td><td>${order.customer_phone || "–"}</td></tr>
+            <tr><td style="padding:4px 0;color:#94a3b8">Szállítás:</td><td>${order.shipping_method === "post" ? `Postai – ${order.shipping_zip} ${order.shipping_city}, ${order.shipping_address}` : "Személyes átvétel"}</td></tr>
+            <tr><td style="padding:4px 0;color:#94a3b8">Fizetés:</td><td>${order.payment_method === "transfer" ? "Banki átutalás" : "Készpénz"}</td></tr>
+            ${order.note ? `<tr><td style="padding:4px 0;color:#94a3b8">Megjegyzés:</td><td>${order.note}</td></tr>` : ""}
+          </table>
+          <h3 style="color:#a78bfa">Rendelt termékek</h3>
+          <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden">
+            ${itemsHtml}
+            <tr style="background:#2a2a3a">
+              <td style="padding:8px 12px;font-weight:bold">Összesen</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
+            </tr>
+          </table>
+        </div>`;
+
+      const adminSubject = `🛍️ Új rendelés: ${order.customer_name} – ${formatHuf(order.total_price)}`;
+      const customerSubject = "Rendelésedet megkaptuk – AxelSub Shop";
+
+      const customerHtml = `
+        <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px">
+          <h2 style="color:#a78bfa;margin-top:0">Köszönjük a rendelésed! 🎉</h2>
+          <p>Szia <strong>${order.customer_name}</strong>!</p>
+          <p>Megkaptuk a rendelésedet. Hamarosan felvesszük veled a kapcsolatot.</p>
+          ${html.replace('<h2 style="color:#a78bfa;margin-top:0">🛍️ Új rendelés érkezett – AxelSub Shop</h2>', "")}
+          <p style="color:#94a3b8;font-size:13px;margin-top:24px">AxelSub – Magyar anime közösség</p>
+        </div>`;
+
+      const promises = [
+        ...NOTIFY_EMAILS.map((to) =>
+          transporter.sendMail({ from: `AxelSub Shop <${process.env.SMTP_USER}>`, to, subject: adminSubject, html })
+        ),
+        transporter.sendMail({
+          from: `AxelSub Shop <${process.env.SMTP_USER}>`,
+          to: order.customer_email,
+          subject: customerSubject,
+          html: customerHtml,
+        }),
+      ];
+
+      await Promise.all(promises);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Email error:", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
 
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const extractId = (slug) => { const m = slug.match(UUID_RE); return m ? m[0] : slug; };
