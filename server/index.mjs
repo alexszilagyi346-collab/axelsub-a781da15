@@ -111,19 +111,22 @@ async function createServer() {
     new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
   async function sendEmail({ to, subject, html }) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) throw new Error("RESEND_API_KEY nincs beállítva");
-    const res = await fetch("https://api.resend.com/emails", {
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) throw new Error("BREVO_API_KEY nincs beállítva");
+    const senderEmail = process.env.BREVO_SENDER_EMAIL;
+    if (!senderEmail) throw new Error("BREVO_SENDER_EMAIL nincs beállítva");
+    const toList = (Array.isArray(to) ? to : [to]).map((email) => ({ email }));
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "api-key": apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "AxelSub Shop <onboarding@resend.dev>",
-        to: Array.isArray(to) ? to : [to],
+        sender: { name: "AxelSub Shop", email: senderEmail },
+        to: toList,
         subject,
-        html,
+        htmlContent: html,
       }),
     });
     if (!res.ok) {
