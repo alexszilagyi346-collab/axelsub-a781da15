@@ -165,6 +165,18 @@ export const usePlaceOrder = () => {
         .from("shop_order_items" as any)
         .insert(items.map((item) => ({ ...item, order_id: orderId })));
       if (itemsError) throw itemsError;
+
+      // Visszaigazoló email küldése (hiba esetén nem szakítja meg a rendelést)
+      try {
+        await fetch("/api/order-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order, items }),
+        });
+      } catch (emailErr) {
+        console.warn("Email értesítés sikertelen:", emailErr);
+      }
+
       return { id: orderId, ...order } as unknown as ShopOrder;
     },
     onSuccess: () => {

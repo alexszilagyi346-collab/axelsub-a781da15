@@ -153,15 +153,38 @@ async function createServer() {
         </div>`;
 
       const adminSubject = `🛍️ Új rendelés: ${order.customer_name} – ${formatHuf(order.total_price)}`;
-      const customerSubject = "Rendelésedet megkaptuk – AxelSub Shop";
+      const customerSubject = `✅ Rendelés visszaigazolás – AxelSub Shop`;
+
+      const shippingLine = order.shipping_method === "post"
+        ? `${order.shipping_zip} ${order.shipping_city}, ${order.shipping_address}`
+        : "Személyes átvétel";
+      const paymentLine = order.payment_method === "transfer" ? "Banki átutalás" : "Készpénz";
 
       const customerHtml = `
-        <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px">
+        <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px;margin:0 auto">
           <h2 style="color:#a78bfa;margin-top:0">Köszönjük a rendelésed! 🎉</h2>
-          <p>Szia <strong>${order.customer_name}</strong>!</p>
-          <p>Megkaptuk a rendelésedet. Hamarosan felvesszük veled a kapcsolatot.</p>
-          ${html.replace('<h2 style="color:#a78bfa;margin-top:0">🛍️ Új rendelés érkezett – AxelSub Shop</h2>', "")}
-          <p style="color:#94a3b8;font-size:13px;margin-top:24px">AxelSub – Magyar anime közösség</p>
+          <p style="margin-bottom:24px">Szia <strong>${order.customer_name}</strong>!<br>Megkaptuk a rendelésedet, és hamarosan felvesszük veled a kapcsolatot.</p>
+
+          <h3 style="color:#a78bfa;margin-bottom:8px">Rendelés részletei</h3>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+            <tr><td style="padding:4px 0;color:#94a3b8;width:140px">Szállítás:</td><td>${shippingLine}</td></tr>
+            <tr><td style="padding:4px 0;color:#94a3b8">Fizetési mód:</td><td>${paymentLine}</td></tr>
+            ${order.note ? `<tr><td style="padding:4px 0;color:#94a3b8">Megjegyzés:</td><td>${order.note}</td></tr>` : ""}
+          </table>
+
+          <h3 style="color:#a78bfa;margin-bottom:8px">Rendelt termékek</h3>
+          <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden;margin-bottom:20px">
+            ${itemsHtml}
+            <tr style="background:#2a2a3a">
+              <td style="padding:8px 12px;font-weight:bold">Összesen</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
+            </tr>
+          </table>
+
+          <p style="color:#94a3b8;font-size:13px;margin-top:24px;border-top:1px solid #2a2a3a;padding-top:16px">
+            Ha kérdésed van, keress minket Discord-on vagy a közösségi oldalainkon.<br>
+            <strong style="color:#a78bfa">AxelSub</strong> – Magyar anime közösség
+          </p>
         </div>`;
 
       const promises = [
