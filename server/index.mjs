@@ -3,7 +3,6 @@ import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import nodemailer from "nodemailer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -108,21 +107,35 @@ async function createServer() {
 
   const NOTIFY_EMAILS = ["alexszilagyi26@gmail.com", "davidbotos1998@gmail.com"];
 
-  const getTransporter = () => {
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    if (!user || !pass) return null;
-    return nodemailer.createTransport({ service: "gmail", auth: { user, pass } });
-  };
-
   const formatHuf = (n) =>
     new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
+
+  async function sendEmail({ to, subject, html }) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("RESEND_API_KEY nincs beállítva");
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "AxelSub Shop <onboarding@resend.dev>",
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+    return res.json();
+  }
 
   app.post("/api/order-notify", async (req, res) => {
     try {
       const { order, items } = req.body;
-      const transporter = getTransporter();
-      if (!transporter) return res.json({ ok: false, reason: "SMTP not configured" });
 
       const itemsHtml = (items || []).map(
         (i) => `<tr>
@@ -131,7 +144,7 @@ async function createServer() {
         </tr>`
       ).join("");
 
-      const html = `
+      const adminHtml = `
         <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px">
           <h2 style="color:#a78bfa;margin-top:0">🛍️ Új rendelés érkezett – AxelSub Shop</h2>
           <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
@@ -152,9 +165,6 @@ async function createServer() {
           </table>
         </div>`;
 
-      const adminSubject = `🛍️ Új rendelés: ${order.customer_name} – ${formatHuf(order.total_price)}`;
-      const customerSubject = `✅ Rendelés visszaigazolás – AxelSub Shop`;
-
       const shippingLine = order.shipping_method === "post"
         ? `${order.shipping_zip} ${order.shipping_city}, ${order.shipping_address}`
         : "Személyes átvétel";
@@ -164,14 +174,12 @@ async function createServer() {
         <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px;margin:0 auto">
           <h2 style="color:#a78bfa;margin-top:0">Köszönjük a rendelésed! 🎉</h2>
           <p style="margin-bottom:24px">Szia <strong>${order.customer_name}</strong>!<br>Megkaptuk a rendelésedet, és hamarosan felvesszük veled a kapcsolatot.</p>
-
           <h3 style="color:#a78bfa;margin-bottom:8px">Rendelés részletei</h3>
           <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
             <tr><td style="padding:4px 0;color:#94a3b8;width:140px">Szállítás:</td><td>${shippingLine}</td></tr>
             <tr><td style="padding:4px 0;color:#94a3b8">Fizetési mód:</td><td>${paymentLine}</td></tr>
             ${order.note ? `<tr><td style="padding:4px 0;color:#94a3b8">Megjegyzés:</td><td>${order.note}</td></tr>` : ""}
           </table>
-
           <h3 style="color:#a78bfa;margin-bottom:8px">Rendelt termékek</h3>
           <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden;margin-bottom:20px">
             ${itemsHtml}
@@ -180,26 +188,17 @@ async function createServer() {
               <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
             </tr>
           </table>
-
           <p style="color:#94a3b8;font-size:13px;margin-top:24px;border-top:1px solid #2a2a3a;padding-top:16px">
             Ha kérdésed van, keress minket Discord-on vagy a közösségi oldalainkon.<br>
             <strong style="color:#a78bfa">AxelSub</strong> – Magyar anime közösség
           </p>
         </div>`;
 
-      const promises = [
-        ...NOTIFY_EMAILS.map((to) =>
-          transporter.sendMail({ from: `AxelSub Shop <${process.env.SMTP_USER}>`, to, subject: adminSubject, html })
-        ),
-        transporter.sendMail({
-          from: `AxelSub Shop <${process.env.SMTP_USER}>`,
-          to: order.customer_email,
-          subject: customerSubject,
-          html: customerHtml,
-        }),
-      ];
+      await Promise.all([
+        sendEmail({ to: NOTIFY_EMAILS, subject: `🛍️ Új rendelés: ${order.customer_name} – ${formatHuf(order.total_price)}`, html: adminHtml }),
+        sendEmail({ to: order.customer_email, subject: `✅ Rendelés visszaigazolás – AxelSub Shop`, html: customerHtml }),
+      ]);
 
-      await Promise.all(promises);
       res.json({ ok: true });
     } catch (err) {
       console.error("Email error:", err.message);
