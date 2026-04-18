@@ -1,5 +1,9 @@
 import { useState } from "react";
+<<<<<<< HEAD
 import { Search, User, LogOut, Settings, History, ChevronDown, Newspaper, Facebook, BookOpen, MessageSquare, ShoppingBag } from "lucide-react";
+=======
+import { Search, User, LogOut, Settings, Menu, X, History, ChevronDown, Newspaper, Facebook, MessageCircle, BookOpen, MessageSquare, ShoppingBag } from "lucide-react";
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +24,10 @@ import { toast } from "sonner";
 const Header = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+<<<<<<< HEAD
+=======
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
   const { user, signOut } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { isModerator } = useIsModerator();
@@ -237,9 +245,101 @@ const Header = () => {
                 </>
               )}
 
+<<<<<<< HEAD
             </div>
           </div>
 
+=======
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-muted-foreground hover:bg-primary/10 rounded-lg"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <nav className="md:hidden pt-4 pb-2 border-t border-border/30 mt-3 space-y-1">
+              <Link
+                to="/"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Kezdőlap
+              </Link>
+
+              <p className="px-3 pt-2 pb-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">Animék</p>
+              {animeLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="block py-2 px-5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              <Link
+                to="/manga"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Manga
+              </Link>
+
+              <Link
+                to="/news"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Hírek
+              </Link>
+
+              <Link
+                to="/requests"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Kérések
+              </Link>
+
+              <Link
+                to="/shop"
+                className="block py-2 px-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-all font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" /> Bolt
+                </span>
+              </Link>
+
+              {canAccessShopAdmin && (
+                <Link
+                  to="/shop-admin"
+                  className="block py-2 px-3 rounded-lg text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Bolt Panel
+                </Link>
+              )}
+
+              {canAccessAdmin && (
+                <Link
+                  to="/admin"
+                  className="block py-2 px-3 rounded-lg text-primary hover:bg-primary/10 transition-all font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {isAdmin ? "Admin" : "Moderátor"}
+                </Link>
+              )}
+            </nav>
+          )}
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
         </div>
       </header>
 

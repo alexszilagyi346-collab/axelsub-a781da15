@@ -143,6 +143,7 @@ const ShopProduct = () => {
 
   const handleOrder = async () => {
     if (!validate()) return;
+<<<<<<< HEAD
     const orderPayload = {
       user_id: user?.id || null,
       customer_name: form.name,
@@ -173,6 +174,48 @@ const ShopProduct = () => {
     } catch (err: any) {
       console.error("Order error:", err);
       toast.error("Hiba a rendelés leadásakor. Kérjük próbáld újra!");
+=======
+    try {
+      const orderPayload = {
+        user_id: user?.id || null,
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        shipping_address: form.address || "Személyes átvétel",
+        shipping_city: form.city || "–",
+        shipping_zip: form.zip || "–",
+        shipping_method: form.shipping,
+        payment_method: form.payment,
+        status: "pending",
+        total_price: total,
+        note: form.note || null,
+      };
+      const variantNote = buildVariantNote();
+      const orderItems = [
+        {
+          product_id: product.id,
+          product_name: product.name,
+          product_price: product.price,
+          quantity,
+          custom_note: variantNote || null,
+        },
+      ];
+      await placeOrder.mutateAsync({
+        order: orderPayload,
+        items: orderItems,
+      });
+      try {
+        await fetch("/api/order-notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderPayload, items: orderItems }),
+        });
+      } catch { /* email hiba nem akadályozza meg a rendelést */ }
+      setStep("success");
+    } catch (err: any) {
+      console.error("Order error:", err);
+      toast.error(err?.message || "Hiba a rendelés leadásakor");
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
     }
   };
 
@@ -180,6 +223,7 @@ const ShopProduct = () => {
     <div className="min-h-screen bg-background">
       <ParticleBackground />
       <Header />
+<<<<<<< HEAD
       <div className="container mx-auto px-4 pt-24 pb-16 max-w-lg relative z-10">
         <div className="glass border border-green-500/30 rounded-3xl p-8 shadow-xl shadow-green-500/10 text-center">
 
@@ -265,6 +309,30 @@ const ShopProduct = () => {
             </Link>
           </div>
 
+=======
+      <div className="container mx-auto px-4 pt-32 max-w-lg text-center relative z-10">
+        <div className="glass border border-primary/30 rounded-3xl p-10 shadow-xl shadow-primary/10">
+          <CheckCircle2 className="h-16 w-16 text-green-400 mx-auto mb-6" />
+          <h1 className="text-3xl font-black text-foreground mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Rendelés leadva!
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Köszönjük a rendelést! Hamarosan felvesszük veled a kapcsolatot a(z) <b>{form.email}</b> e-mail címen.
+          </p>
+          {settings?.payment_method !== "cash" && form.payment === "transfer" && settings?.bank_account && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-left mb-6 text-sm">
+              <p className="font-bold text-foreground mb-2">Banki átutalás adatai:</p>
+              <p className="text-muted-foreground">Bank: <span className="text-foreground">{settings.bank_name}</span></p>
+              <p className="text-muted-foreground">Számlatulajdonos: <span className="text-foreground">{settings.bank_account_holder}</span></p>
+              <p className="text-muted-foreground">Számlaszám: <span className="text-foreground font-mono">{settings.bank_account}</span></p>
+              <p className="text-muted-foreground mt-1">Összeg: <span className="text-primary font-bold">{formatPrice(total)}</span></p>
+              <p className="text-muted-foreground">Megjegyzés: <span className="text-foreground">{form.name} – rendelés</span></p>
+            </div>
+          )}
+          <Link to="/shop">
+            <Button className="bg-primary hover:bg-primary/90 neon-glow">Vissza a boltba</Button>
+          </Link>
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
         </div>
       </div>
     </div>

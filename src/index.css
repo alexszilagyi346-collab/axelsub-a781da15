@@ -281,6 +281,7 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
+<<<<<<< HEAD
 
 /* Mobile bottom nav spacing */
 @media (max-width: 767px) {
@@ -293,3 +294,5 @@
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+=======
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f

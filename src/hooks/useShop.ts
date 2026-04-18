@@ -189,6 +189,7 @@ export const usePlaceOrder = () => {
 export const useUpdateOrderStatus = () => {
   const qc = useQueryClient();
   return useMutation({
+<<<<<<< HEAD
     mutationFn: async ({
       id,
       status,
@@ -198,11 +199,15 @@ export const useUpdateOrderStatus = () => {
       status: string;
       order?: ShopOrder;
     }) => {
+=======
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
       const { error } = await supabase
         .from("shop_orders" as any)
         .update({ status, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
+<<<<<<< HEAD
 
       const EMAIL_STATUSES = ["confirmed", "shipped", "done"];
       if (order && EMAIL_STATUSES.includes(status)) {
@@ -220,6 +225,8 @@ export const useUpdateOrderStatus = () => {
           console.warn("Státusz email sikertelen:", emailErr);
         }
       }
+=======
+>>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shop_orders"] });
