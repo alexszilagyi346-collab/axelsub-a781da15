@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>AxelSub - Anime</title>
+    <meta name="description" content="Magyar feliratú animék egy helyen – AxelSub" />
+    <meta name="author" content="AxelSub" />
+
+    <meta property="og:title" content="AxelSub - Anime" />
+    <meta property="og:description" content="Magyar feliratú animék egy helyen – AxelSub" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://axelsub.lovable.app/favicon.png" />
+    <meta property="og:url" content="" />
+    <meta property="og:site_name" content="AxelSub" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AxelSub - Anime" />
+    <meta name="twitter:image" content="https://axelsub.lovable.app/favicon.png" />
+    <script>
+      (function () {
+        var p = new URLSearchParams(window.location.search).get('p');
+        if (p) window.history.replaceState(null, null, decodeURIComponent(p));
+      })();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
