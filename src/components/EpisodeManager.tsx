@@ -189,11 +189,32 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
         subtitle_type: episode.subtitle_type || null,
       });
       if (error) throw error;
+      return episode.episode_number;
     },
-    onSuccess: () => {
+    onSuccess: (episodeNumber) => {
       queryClient.invalidateQueries({ queryKey: ["episodes", animeId] });
       resetAddForm();
       toast.success("Epizód hozzáadva!");
+      // Send email notifications to subscribers (fire-and-forget)
+      fetch("/api/episode-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          animeId,
+          animeTitle,
+          episodeNumber,
+          animeSlug: animeId,
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok && data.sent > 0) {
+            toast.success(`📧 ${data.sent} feliratkozónak kiküldtük az értesítőt!`);
+          }
+        })
+        .catch(() => {
+          // Email hiba nem szakítja meg a folyamatot
+        });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Hiba az epizód hozzáadásakor!");
