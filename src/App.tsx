@@ -5,10 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-<<<<<<< HEAD
 import MobileBottomNav from "./components/MobileBottomNav";
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
 import Index from "./pages/Index";
 import Browse from "./pages/Browse";
 import AnimeDetail from "./pages/AnimeDetail";
@@ -49,10 +46,7 @@ const App = () => (
             <Route path="/shop-admin" element={<ProtectedRoute><ShopAdmin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-<<<<<<< HEAD
           <MobileBottomNav />
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

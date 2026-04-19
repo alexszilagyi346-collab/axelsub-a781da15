@@ -619,7 +619,6 @@ export type Database = {
           },
         ]
       }
-<<<<<<< HEAD
       shop_order_items: {
         Row: {
           id: string
@@ -811,8 +810,6 @@ export type Database = {
         }
         Relationships: []
       }
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
     }
     Views: {
       [_ in never]: never
@@ -827,11 +824,7 @@ export type Database = {
       }
     }
     Enums: {
-<<<<<<< HEAD
       app_role: "admin" | "moderator" | "user" | "shop_manager"
-=======
-      app_role: "admin" | "moderator" | "user"
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
     }
     CompositeTypes: {
       [_ in never]: never
@@ -959,11 +952,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-<<<<<<< HEAD
       app_role: ["admin", "moderator", "user", "shop_manager"],
-=======
-      app_role: ["admin", "moderator", "user"],
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
     },
   },
 } as const

@@ -19,15 +19,11 @@ import {
   ShieldCheck,
   ShieldOff,
   Search,
-<<<<<<< HEAD
   BookOpen,
   Lock,
   CheckCircle2,
   AlertCircle,
   ExternalLink
-=======
-  BookOpen
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
 } from "lucide-react";
 import EpisodeManager from "@/components/EpisodeManager";
 import SocialLinksManager from "@/components/SocialLinksManager";
@@ -433,12 +429,9 @@ const Admin = () => {
                 <TabsTrigger value="users" className="gap-2"><Shield className="h-4 w-4" /> Jogosultságok</TabsTrigger>
               )}
               <TabsTrigger value="settings" className="gap-2"><BookOpen className="h-4 w-4" /> Beállítások</TabsTrigger>
-<<<<<<< HEAD
               {isAdmin && (
                 <TabsTrigger value="secrets" className="gap-2"><Lock className="h-4 w-4" /> Titkok</TabsTrigger>
               )}
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
             </TabsList>
 
             {/* ANIMÉK TAB */}
@@ -639,7 +632,6 @@ const Admin = () => {
               </div>
               <SocialLinksManager />
             </TabsContent>
-<<<<<<< HEAD
 
             {/* TITKOK TAB – csak admin */}
             {isAdmin && (
@@ -739,8 +731,6 @@ const Admin = () => {
                 </div>
               </TabsContent>
             )}
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
           </Tabs>
         </div>
       </main>

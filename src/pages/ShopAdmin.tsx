@@ -307,11 +307,7 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
               {statuses.map((s) => (
                 <button
                   key={s}
-<<<<<<< HEAD
                   onClick={() => updateStatus.mutate({ id: order.id, status: s, order })}
-=======
-                  onClick={() => updateStatus.mutate({ id: order.id, status: s })}
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
                   className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${order.status === s
                     ? `${STATUS_LABELS[s].color} border-current`
                     : "border-border/40 text-muted-foreground hover:border-primary/40"

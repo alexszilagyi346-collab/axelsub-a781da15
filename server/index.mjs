@@ -3,10 +3,7 @@ import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-<<<<<<< HEAD
 import archiver from "archiver";
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -140,7 +137,6 @@ async function createServer() {
     return res.json();
   }
 
-<<<<<<< HEAD
   app.post("/api/order-status-notify", async (req, res) => {
     try {
       const { order, items, newStatus } = req.body;
@@ -221,8 +217,6 @@ async function createServer() {
     }
   });
 
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
   app.post("/api/order-notify", async (req, res) => {
     try {
       const { order, items } = req.body;
@@ -296,7 +290,6 @@ async function createServer() {
     }
   });
 
-<<<<<<< HEAD
   app.get("/api/download-zip", (req, res) => {
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="axelsub.zip"`);
@@ -327,8 +320,6 @@ async function createServer() {
     archive.finalize();
   });
 
-=======
->>>>>>> 201c63fd68c0e1e44e6869c59472620d5669616f
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const extractId = (slug) => { const m = slug.match(UUID_RE); return m ? m[0] : slug; };
 
