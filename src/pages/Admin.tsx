@@ -23,7 +23,11 @@ import {
   Lock,
   CheckCircle2,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  Mail,
+  Bot,
+  SendHorizonal,
+  Sparkles
 } from "lucide-react";
 import EpisodeManager from "@/components/EpisodeManager";
 import SocialLinksManager from "@/components/SocialLinksManager";
@@ -214,6 +218,174 @@ const UserManagement = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// ---- Email küldés tab ----
+const EmailSendTab = () => {
+  const { data: animes } = useAnimes();
+  const [selectedAnimeId, setSelectedAnimeId] = useState("");
+  const [episodes, setEpisodes] = useState<any[]>([]);
+  const [selectedEpisode, setSelectedEpisode] = useState<any>(null);
+  const [loadingEps, setLoadingEps] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const selectedAnime = animes?.find((a) => a.id === selectedAnimeId);
+
+  useEffect(() => {
+    if (!selectedAnimeId) { setEpisodes([]); setSelectedEpisode(null); return; }
+    setLoadingEps(true);
+    supabase
+      .from("episodes")
+      .select("id, episode_number, title")
+      .eq("anime_id", selectedAnimeId)
+      .order("episode_number", { ascending: false })
+      .then(({ data }) => {
+        setEpisodes(data || []);
+        setSelectedEpisode(null);
+        setSubject("");
+        setBody("");
+        setLoadingEps(false);
+      });
+  }, [selectedAnimeId]);
+
+  useEffect(() => {
+    if (!selectedAnime || !selectedEpisode) return;
+    const t = selectedAnime.title;
+    const ep = selectedEpisode.episode_number;
+    setSubject(`🎌 Új epizód érkezett! ${t} – ${ep}. rész`);
+    setBody(`Szia!
+
+Izgalmas hír érkezett – a(z) ${t} legújabb, ${ep}. epizódja megérkezett az AxelSub-ra! 🎉
+
+🎬 Mit várj ebben a részben?
+Ez az epizód tele van izgalommal, fordulatokkal és olyan pillanatokkal, amiket nem akarsz lemaradni! Magyar felirattal, kiváló minőségben, ahogy megszoktad.
+
+👉 Nézd meg most:
+https://axelsub.hu/anime/${selectedAnimeId}
+
+Ha még nem iratkoztál fel a sorozatra, megteheted az anime oldalán, és az összes új részről értesítünk!
+
+Jó nézést! 🍿
+AxelSub csapata 🎌`);
+  }, [selectedEpisode, selectedAnime]);
+
+  const handleSend = async () => {
+    if (!selectedAnime || !selectedEpisode) return toast.error("Válassz animét és epizódot!");
+    setSending(true);
+    try {
+      const res = await fetch("/api/episode-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          animeId: selectedAnimeId,
+          animeTitle: selectedAnime.title,
+          episodeNumber: selectedEpisode.episode_number,
+          animeSlug: selectedAnimeId,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      toast.success(`✅ Email elküldve ${data.sent} feliratkozónak!`);
+    } catch (err: any) {
+      toast.error(`Hiba: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Bot className="h-6 w-6 text-primary" /> Email küldés
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          Válassz animét és epizódot — a bot automatikusan generál promo szöveget, amit szerkeszthetsz és elküldhetsz a feliratkozóknak.
+        </p>
+      </div>
+
+      <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-primary">
+        <Sparkles className="h-4 w-4 shrink-0" />
+        Az email csak azoknak megy ki, akik feliratkoztak erre az animére az oldalon.
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-sm text-muted-foreground mb-2 block">Anime kiválasztása</Label>
+          <select
+            value={selectedAnimeId}
+            onChange={(e) => setSelectedAnimeId(e.target.value)}
+            className="w-full rounded-lg bg-background/50 border border-border/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+          >
+            <option value="">— Válassz animét —</option>
+            {animes?.map((a) => (
+              <option key={a.id} value={a.id}>{a.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label className="text-sm text-muted-foreground mb-2 block">Epizód kiválasztása</Label>
+          {loadingEps ? (
+            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Epizódok betöltése...
+            </div>
+          ) : (
+            <select
+              value={selectedEpisode?.id || ""}
+              onChange={(e) => setSelectedEpisode(episodes.find((ep) => ep.id === e.target.value) || null)}
+              disabled={!selectedAnimeId || episodes.length === 0}
+              className="w-full rounded-lg bg-background/50 border border-border/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 disabled:opacity-50"
+            >
+              <option value="">— Válassz epizódot —</option>
+              {episodes.map((ep) => (
+                <option key={ep.id} value={ep.id}>
+                  {ep.episode_number}. rész{ep.title ? ` – ${ep.title}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {selectedEpisode && (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm text-muted-foreground mb-1 block">Email tárgy</Label>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="glass border-border/50"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-sm text-muted-foreground">Email szövege</Label>
+              <span className="text-xs text-primary flex items-center gap-1">
+                <Bot className="h-3 w-3" /> Bot által generálva – szerkeszthető
+              </span>
+            </div>
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={14}
+              className="glass border-border/50 font-mono text-sm resize-none"
+            />
+          </div>
+          <Button
+            onClick={handleSend}
+            disabled={sending}
+            className="w-full bg-primary hover:bg-primary/90 gap-2 neon-glow"
+          >
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
+            {sending ? "Küldés folyamatban..." : `Email küldése minden feliratkozónak – ${selectedAnime?.title} ${selectedEpisode.episode_number}. rész`}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
@@ -423,11 +595,12 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="animes" className="w-full">
-            <TabsList className="mb-6">
+            <TabsList className="mb-6 flex-wrap h-auto gap-1">
               <TabsTrigger value="animes" className="gap-2"><Film className="h-4 w-4" /> Animék</TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="users" className="gap-2"><Shield className="h-4 w-4" /> Jogosultságok</TabsTrigger>
               )}
+              <TabsTrigger value="email" className="gap-2"><Mail className="h-4 w-4" /> Email küldés</TabsTrigger>
               <TabsTrigger value="settings" className="gap-2"><BookOpen className="h-4 w-4" /> Beállítások</TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="secrets" className="gap-2"><Lock className="h-4 w-4" /> Titkok</TabsTrigger>
@@ -623,6 +796,11 @@ const Admin = () => {
                 <UserManagement />
               </TabsContent>
             )}
+
+            {/* EMAIL KÜLDÉS TAB */}
+            <TabsContent value="email">
+              <EmailSendTab />
+            </TabsContent>
 
             {/* BEÁLLÍTÁSOK TAB */}
             <TabsContent value="settings">

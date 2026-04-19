@@ -16,9 +16,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Package, ShoppingBag, Settings, Users, Plus, Pencil, Trash2,
-  ChevronDown, ChevronUp, Eye, X, Check, Image, Loader2, Truck, Mail, Phone
+  ChevronDown, ChevronUp, Eye, X, Check, Image, Loader2, Truck, Mail, Phone,
+  Bot, SendHorizonal, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -181,9 +183,103 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
   );
 };
 
+// ---- Order Email Dialog ----
+const OrderEmailDialog = ({ order, onClose }: { order: ShopOrder; onClose: () => void }) => {
+  const itemsList = (order.shop_order_items || [])
+    .map((i) => `• ${i.product_name} × ${i.quantity}${i.custom_note ? ` (${i.custom_note})` : ""} — ${formatPrice(i.product_price * i.quantity)}`)
+    .join("\n");
+
+  const shippingLine = order.shipping_method === "post"
+    ? `Postai szállítás: ${order.shipping_zip} ${order.shipping_city}, ${order.shipping_address}`
+    : "Személyes átvétel";
+
+  const paymentLine = order.payment_method === "transfer" ? "Banki átutalás" : "Készpénz";
+
+  const botSubject = `📦 Rendelési összesítő – AxelSub Shop`;
+  const botBody = `Kedves ${order.customer_name}!
+
+Köszönjük rendelésedet az AxelSub Shopban! 🎌
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛍️ RENDELT TERMÉKEK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${itemsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 RENDELÉS ADATAI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Szállítás: ${shippingLine}
+Fizetés: ${paymentLine}
+Összesen: ${formatPrice(order.total_price)}${order.note ? `\nMegjegyzés: ${order.note}` : ""}
+
+Ha kérdésed van, írj vissza erre az emailre!
+
+Üdvözlettel,
+AxelSub csapata 🎌`;
+
+  const [subject, setSubject] = useState(botSubject);
+  const [body, setBody] = useState(botBody);
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      const htmlContent = `<pre style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.7;color:#1e1e2e;white-space:pre-wrap;">${body}</pre>`;
+      const res = await fetch("/api/send-custom-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: order.customer_email, subject, htmlContent }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      toast.success(`Email elküldve → ${order.customer_email}`);
+      onClose();
+    } catch (err: any) {
+      toast.error(`Email hiba: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg glass border border-border/50">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-foreground">
+            <Bot className="h-5 w-5 text-primary" />
+            Email küldése – {order.customer_name}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-xs text-primary">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" />
+            A bot automatikusan kitöltötte a rendelés adataival. Szabadon szerkeszthető.
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Tárgy</Label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="glass border-border/50 text-sm" />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">Üzenet</Label>
+            <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={12} className="glass border-border/50 text-sm font-mono resize-none" />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button onClick={handleSend} disabled={sending} className="flex-1 bg-primary hover:bg-primary/90 gap-2">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
+              {sending ? "Küldés..." : `Küldés → ${order.customer_email}`}
+            </Button>
+            <Button variant="outline" onClick={onClose} className="border-border/50">Mégse</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // ---- Order Row ----
 const OrderRow = ({ order }: { order: ShopOrder }) => {
   const [open, setOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [courierInput, setCourierInput] = useState(order.courier || "");
   const updateStatus = useUpdateOrderStatus();
   const updateCourier = useUpdateCourier();
@@ -318,8 +414,24 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
               ))}
             </div>
           </div>
+
+          {/* Email küldő gomb */}
+          <div className="pt-1 border-t border-border/20">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEmailOpen(true)}
+              className="gap-2 border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50"
+            >
+              <Bot className="h-4 w-4" />
+              Email küldése vevőnek
+              <Sparkles className="h-3 w-3 opacity-60" />
+            </Button>
+          </div>
         </div>
       )}
+
+      {emailOpen && <OrderEmailDialog order={order} onClose={() => setEmailOpen(false)} />}
     </div>
   );
 };

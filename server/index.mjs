@@ -471,6 +471,19 @@ async function createServer() {
     }
   });
 
+  // --- Custom email send (admin) ---
+  app.post("/api/send-custom-email", async (req, res) => {
+    try {
+      const { to, subject, htmlContent } = req.body;
+      if (!to || !subject || !htmlContent) return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
+      await sendEmail({ to, subject, html: htmlContent });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Custom email error:", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // --- Unsubscribe endpoint ---
   app.get("/api/unsubscribe", async (req, res) => {
     try {
