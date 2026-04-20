@@ -198,7 +198,7 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
       // Send email notifications to subscribers (fire-and-forget)
       fetch("/api/episode-notify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({
           animeId,
           animeTitle,
@@ -206,14 +206,21 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
           animeSlug: animeId,
         }),
       })
-        .then((r) => r.json())
+        .then(async (r) => {
+          if (!r.ok) {
+            const raw = await r.text();
+            console.error("[episode-notify] szerver hiba:", r.status, raw.slice(0, 200));
+            return;
+          }
+          return r.json();
+        })
         .then((data) => {
-          if (data.ok && data.sent > 0) {
+          if (data?.ok && data.sent > 0) {
             toast.success(`📧 ${data.sent} feliratkozónak kiküldtük az értesítőt!`);
           }
         })
-        .catch(() => {
-          // Email hiba nem szakítja meg a folyamatot
+        .catch((err) => {
+          console.warn("[episode-notify] email hiba (nem kritikus):", err);
         });
     },
     onError: (error: Error) => {

@@ -168,13 +168,17 @@ export const usePlaceOrder = () => {
 
       // Visszaigazoló email küldése (hiba esetén nem szakítja meg a rendelést)
       try {
-        await fetch("/api/order-notify", {
+        const emailRes = await fetch("/api/order-notify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({ order, items }),
         });
+        if (!emailRes.ok) {
+          const raw = await emailRes.text();
+          console.warn("[order-notify] szerver hiba:", emailRes.status, raw.slice(0, 200));
+        }
       } catch (emailErr) {
-        console.warn("Email értesítés sikertelen:", emailErr);
+        console.warn("[order-notify] email sikertelen:", emailErr);
       }
 
       return { id: orderId, ...order } as unknown as ShopOrder;
@@ -207,17 +211,21 @@ export const useUpdateOrderStatus = () => {
       const EMAIL_STATUSES = ["confirmed", "shipped", "done"];
       if (order && EMAIL_STATUSES.includes(status)) {
         try {
-          await fetch("/api/order-status-notify", {
+          const statusRes = await fetch("/api/order-status-notify", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
             body: JSON.stringify({
               order,
               items: order.shop_order_items || [],
               newStatus: status,
             }),
           });
+          if (!statusRes.ok) {
+            const raw = await statusRes.text();
+            console.warn("[order-status-notify] szerver hiba:", statusRes.status, raw.slice(0, 200));
+          }
         } catch (emailErr) {
-          console.warn("Státusz email sikertelen:", emailErr);
+          console.warn("[order-status-notify] email sikertelen:", emailErr);
         }
       }
     },
