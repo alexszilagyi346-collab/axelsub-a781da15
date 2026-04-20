@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "q1cVbzKk3Dv0dg9oE1H-r"
+uri = "file://vercel-email-api.zip"
+type = "unspecified"
+title = "Vercel Email API fájlok"
