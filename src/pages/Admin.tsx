@@ -279,7 +279,7 @@ AxelSub csapata 🎌`);
     try {
       const res = await fetch("/api/episode-notify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({
           animeId: selectedAnimeId,
           animeTitle: selectedAnime.title,
@@ -287,10 +287,16 @@ AxelSub csapata 🎌`);
           animeSlug: selectedAnimeId,
         }),
       });
+      if (!res.ok) {
+        const raw = await res.text();
+        console.error("[episode-notify] szerver hiba – nyers válasz:", raw);
+        throw new Error(`Szerver hiba (${res.status}): ${raw.slice(0, 120)}`);
+      }
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       toast.success(`✅ Email elküldve ${data.sent} feliratkozónak!`);
     } catch (err: any) {
+      console.error("[episode-notify] hiba:", err);
       toast.error(`Hiba: ${err.message}`);
     } finally {
       setSending(false);

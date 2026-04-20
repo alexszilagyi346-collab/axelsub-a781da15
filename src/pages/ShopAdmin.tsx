@@ -227,14 +227,20 @@ AxelSub csapata 🎌`;
       const htmlContent = `<pre style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.7;color:#1e1e2e;white-space:pre-wrap;">${body}</pre>`;
       const res = await fetch("/api/send-custom-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ to: order.customer_email, subject, htmlContent }),
       });
+      if (!res.ok) {
+        const raw = await res.text();
+        console.error("[send-custom-email] szerver hiba – nyers válasz:", raw);
+        throw new Error(`Szerver hiba (${res.status}): ${raw.slice(0, 120)}`);
+      }
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       toast.success(`Email elküldve → ${order.customer_email}`);
       onClose();
     } catch (err: any) {
+      console.error("[send-custom-email] hiba:", err);
       toast.error(`Email hiba: ${err.message}`);
     } finally {
       setSending(false);

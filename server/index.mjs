@@ -107,6 +107,29 @@ async function createServer() {
 
   app.use(express.json());
 
+  // CORS – engedélyezett domainek (production + dev)
+  const ALLOWED_ORIGINS = [
+    "https://axelsub.eu",
+    "https://www.axelsub.eu",
+    "https://axelsub.lovable.app",
+  ];
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && (ALLOWED_ORIGINS.includes(origin) || !isProd)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    next();
+  });
+
+  // API útvonalak mindig JSON választ adnak, soha HTML-t
+  app.use("/api", (req, res, next) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    next();
+  });
+
   const NOTIFY_EMAILS = ["alexszilagyi26@gmail.com", "davidbotos1998@gmail.com"];
 
   const formatHuf = (n) =>
