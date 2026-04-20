@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiUrl } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -168,7 +169,7 @@ export const usePlaceOrder = () => {
 
       // Visszaigazoló email küldése (hiba esetén nem szakítja meg a rendelést)
       try {
-        const emailRes = await fetch("/api/order-notify", {
+        const emailRes = await fetch(apiUrl("/api/order-notify"), {
           method: "POST",
           headers: { "Content-Type": "application/json", "Accept": "application/json" },
           body: JSON.stringify({ order, items }),
@@ -211,7 +212,7 @@ export const useUpdateOrderStatus = () => {
       const EMAIL_STATUSES = ["confirmed", "shipped", "done"];
       if (order && EMAIL_STATUSES.includes(status)) {
         try {
-          const statusRes = await fetch("/api/order-status-notify", {
+          const statusRes = await fetch(apiUrl("/api/order-status-notify"), {
             method: "POST",
             headers: { "Content-Type": "application/json", "Accept": "application/json" },
             body: JSON.stringify({

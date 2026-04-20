@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { apiUrl } from "@/lib/api";
 import { Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -277,7 +278,7 @@ AxelSub csapata 🎌`);
     if (!selectedAnime || !selectedEpisode) return toast.error("Válassz animét és epizódot!");
     setSending(true);
     try {
-      const res = await fetch("/api/episode-notify", {
+      const res = await fetch(apiUrl("/api/episode-notify"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({

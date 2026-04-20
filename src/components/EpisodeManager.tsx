@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { apiUrl } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Play, Loader2, X, ChevronDown, ChevronUp, Pencil, Save, Upload, FileText } from "lucide-react";
@@ -196,7 +197,7 @@ const EpisodeManager = ({ animeId, animeTitle, onClose }: EpisodeManagerProps) =
       resetAddForm();
       toast.success("Epizód hozzáadva!");
       // Send email notifications to subscribers (fire-and-forget)
-      fetch("/api/episode-notify", {
+      fetch(apiUrl("/api/episode-notify"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({

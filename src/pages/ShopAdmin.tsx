@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiUrl } from "@/lib/api";
 import { Navigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
@@ -225,7 +226,7 @@ AxelSub csapata 🎌`;
     setSending(true);
     try {
       const htmlContent = `<pre style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.7;color:#1e1e2e;white-space:pre-wrap;">${body}</pre>`;
-      const res = await fetch("/api/send-custom-email", {
+      const res = await fetch(apiUrl("/api/send-custom-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ to: order.customer_email, subject, htmlContent }),
