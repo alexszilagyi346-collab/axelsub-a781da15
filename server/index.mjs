@@ -1,3 +1,7 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+try { require("dotenv").config(); } catch {}
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
