@@ -55,9 +55,16 @@ export async function fetchAnimeSubscribers(animeId) {
 }
 
 export function setCors(res, req) {
-  const ALLOWED = ["https://axelsub.eu", "https://www.axelsub.eu", "https://axelsub.lovable.app"];
-  const origin = req.headers.origin;
-  if (origin && ALLOWED.includes(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
+  const ALLOWED = [
+    "https://axelsub.eu",
+    "https://www.axelsub.eu",
+    "https://axelsub.lovable.app",
+  ];
+  const origin = req.headers.origin || "";
+  const isReplit = origin.endsWith(".replit.dev") || origin.endsWith(".repl.co");
+  if (isReplit || ALLOWED.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
