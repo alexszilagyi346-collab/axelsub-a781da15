@@ -44,10 +44,15 @@ For production: `npm run build` then `npm start` (serves built `dist/` via sirv)
 
 ## Environment Variables
 
-Set in Replit's environment system (shared) — do not hardcode these:
-- `VITE_SUPABASE_URL` - Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key (safe to expose in browser)
-- `VITE_SUPABASE_PROJECT_ID` - Supabase project ID
+Set in Replit Secrets (or in `.env` for local dev — see `.env.example`):
+- `VITE_SUPABASE_URL` - Supabase project URL (already set in shared env)
+- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key (already set as secret)
+- `VITE_SUPABASE_PROJECT_ID` - Supabase project ID (already set in shared env)
+- `SUPABASE_SERVICE_ROLE_KEY` *(optional)* - Needed for episode subscriber email notifications
+- `BREVO_API_KEY` *(optional)* - Brevo transactional email API key (order/episode emails)
+- `BREVO_SENDER_EMAIL` *(optional)* - Verified sender address in Brevo
+
+The server loads `.env` automatically via dotenv if present (dev only). In production use Replit Secrets.
 
 ## Key Features
 
