@@ -56,6 +56,45 @@ async function sendEmail({ to, subject, html, senderName = "AxelSub" }) {
   return res.json();
 }
 
+async function fetchAllRegisteredUsers() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
+  const out = [];
+  const seen = new Set();
+  let page = 1;
+  const perPage = 200;
+  while (true) {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {
+      headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+    });
+    if (!r.ok) break;
+    const data = await r.json();
+    const users = data.users || [];
+    if (!users.length) break;
+    const ids = users.map((u) => u.id).filter(Boolean);
+    let profilesMap = new Map();
+    if (ids.length) {
+      const profRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,display_name`,
+        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      if (profRes.ok) {
+        const profiles = await profRes.json();
+        profilesMap = new Map(profiles.map((p) => [p.id, p.display_name]));
+      }
+    }
+    for (const u of users) {
+      if (!u.email || seen.has(u.id)) continue;
+      seen.add(u.id);
+      const name = profilesMap.get(u.id) || u.email.split("@")[0];
+      out.push({ email: u.email, name, userId: u.id });
+    }
+    if (users.length < perPage) break;
+    page++;
+    if (page > 50) break;
+  }
+  return out;
+}
+
 async function fetchAnimeSubscribers(animeId) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
   const subsRes = await fetch(
@@ -109,22 +148,37 @@ app.post("/api/send-custom-email", async (req, res) => {
 
 app.post("/api/episode-notify", async (req, res) => {
   try {
-    const { animeId, animeTitle, episodeNumber, animeSlug } = req.body;
+    const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers } = req.body;
     if (!animeId || !animeTitle || !episodeNumber)
       return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
 
-    const subscribers = await fetchAnimeSubscribers(animeId);
-    if (!subscribers.length) return res.json({ ok: true, sent: 0, message: "Nincs feliratkozó" });
+    let recipients = [];
+    if (notifyAllUsers) {
+      const [allUsers, subs] = await Promise.all([
+        fetchAllRegisteredUsers(),
+        fetchAnimeSubscribers(animeId),
+      ]);
+      const map = new Map();
+      for (const u of allUsers) map.set(u.userId, { ...u, isSubscriber: false });
+      for (const s of subs) map.set(s.userId, { ...s, isSubscriber: true });
+      recipients = Array.from(map.values());
+    } else {
+      recipients = (await fetchAnimeSubscribers(animeId)).map((s) => ({ ...s, isSubscriber: true }));
+    }
+    if (!recipients.length) return res.json({ ok: true, sent: 0, message: notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó" });
 
     const baseUrl = "https://axelsub.eu";
     const episodeLink = `${baseUrl}/anime/${animeSlug || animeId}`;
     const subject = `🎌 Új epizód: ${animeTitle} – ${episodeNumber}. rész!`;
     let sent = 0;
 
-    for (const subscriber of subscribers) {
+    for (const subscriber of recipients) {
       try {
         const token = Buffer.from(JSON.stringify({ userId: subscriber.userId, animeId })).toString("base64url");
         const unsubscribeLink = `${baseUrl}/api/unsubscribe?token=${token}`;
+        const subFooter = subscriber.isSubscriber
+          ? `Leiratkozás: <a href="${unsubscribeLink}" style="color:#7c3aed;">kattints ide</a>`
+          : `Ezt az értesítőt minden regisztrált AxelSub-tagnak küldjük. Iratkozz fel az anime oldalán a folyamatos értesítésekért!`;
         const html = `<!DOCTYPE html><html lang="hu"><head><meta charset="UTF-8"/></head>
 <body style="margin:0;padding:0;background:#0d0d1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d1a;padding:40px 16px;">
@@ -141,9 +195,7 @@ app.post("/api/episode-notify", async (req, res) => {
 <table width="100%"><tr><td align="center" style="padding-bottom:32px;">
 <a href="${episodeLink}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:16px;font-weight:700;text-decoration:none;padding:16px 40px;border-radius:50px;">▶&nbsp;&nbsp;Megnézem most!</a>
 </td></tr></table>
-<p style="margin:0;font-size:13px;color:#475569;text-align:center;">
-Leiratkozás: <a href="${unsubscribeLink}" style="color:#7c3aed;">kattints ide</a>
-</p>
+<p style="margin:0;font-size:13px;color:#475569;text-align:center;">${subFooter}</p>
 </td></tr>
 </table>
 </td></tr>
@@ -155,7 +207,7 @@ Leiratkozás: <a href="${unsubscribeLink}" style="color:#7c3aed;">kattints ide</
         console.warn(`Email hiba (${subscriber.email}):`, emailErr.message);
       }
     }
-    res.json({ ok: true, sent, total: subscribers.length });
+    res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers" });
   } catch (err) {
     console.error("Episode notify error:", err.message);
     res.status(500).json({ ok: false, error: err.message });

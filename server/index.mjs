@@ -140,6 +140,45 @@ async function createServer() {
     new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
   // --- Episode notification helpers ---
+  async function fetchAllRegisteredUsers() {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
+    const out = [];
+    const seen = new Set();
+    let page = 1;
+    const perPage = 200;
+    while (true) {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {
+        headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+      });
+      if (!r.ok) break;
+      const data = await r.json();
+      const users = data.users || [];
+      if (!users.length) break;
+      const ids = users.map((u) => u.id).filter(Boolean);
+      let profilesMap = new Map();
+      if (ids.length) {
+        const profRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,display_name`,
+          { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+        );
+        if (profRes.ok) {
+          const profiles = await profRes.json();
+          profilesMap = new Map(profiles.map((p) => [p.id, p.display_name]));
+        }
+      }
+      for (const u of users) {
+        if (!u.email || seen.has(u.id)) continue;
+        seen.add(u.id);
+        const name = profilesMap.get(u.id) || u.email.split("@")[0];
+        out.push({ email: u.email, name, userId: u.id });
+      }
+      if (users.length < perPage) break;
+      page++;
+      if (page > 50) break;
+    }
+    return out;
+  }
+
   async function fetchAnimeSubscribers(animeId) {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
 
@@ -185,7 +224,7 @@ async function createServer() {
     return Buffer.from(JSON.stringify({ userId, animeId })).toString("base64url");
   }
 
-  function buildEpisodeEmailHtml({ userName, animeTitle, episodeNumber, episodeLink, unsubscribeLink }) {
+  function buildEpisodeEmailHtml({ userName, animeTitle, episodeNumber, episodeLink, unsubscribeLink, isSubscriber = true }) {
     const t = escape(animeTitle);
     const u = escape(userName);
     const ep = Number(episodeNumber);
@@ -230,7 +269,7 @@ async function createServer() {
         </tr>
       </table>
       <div style="height:1px;background:linear-gradient(to right,transparent,#7c3aed44,transparent);margin-bottom:28px;"></div>
-      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.7;text-align:center;">Ez az értesítés azért érkezett, mert feliratkoztál a(z) <strong style="color:#94a3b8;">${t}</strong> értesítéseire az AxelSub-on.</p>
+      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.7;text-align:center;">${isSubscriber ? `Ez az értesítés azért érkezett, mert feliratkoztál a(z) <strong style="color:#94a3b8;">${t}</strong> értesítéseire az AxelSub-on.` : `Ezt az értesítőt minden regisztrált AxelSub-tagnak küldjük. Iratkozz fel a(z) <strong style=\"color:#94a3b8;\">${t}</strong> oldalán, hogy közvetlenül értesítsünk a következő részekről!`}</p>
     </td>
   </tr>
   <tr>
@@ -457,14 +496,27 @@ async function createServer() {
   // --- Episode notification endpoint ---
   app.post("/api/episode-notify", async (req, res) => {
     try {
-      const { animeId, animeTitle, episodeNumber, animeSlug } = req.body;
+      const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers } = req.body;
       if (!animeId || !animeTitle || !episodeNumber) {
         return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
       }
 
-      const subscribers = await fetchAnimeSubscribers(animeId);
-      if (!subscribers.length) {
-        return res.json({ ok: true, sent: 0, message: "Nincs feliratkozó" });
+      let recipients = [];
+      if (notifyAllUsers) {
+        const [allUsers, subs] = await Promise.all([
+          fetchAllRegisteredUsers(),
+          fetchAnimeSubscribers(animeId),
+        ]);
+        const map = new Map();
+        for (const u of allUsers) map.set(u.userId, { ...u, isSubscriber: false });
+        for (const s of subs) map.set(s.userId, { ...s, isSubscriber: true });
+        recipients = Array.from(map.values());
+      } else {
+        recipients = (await fetchAnimeSubscribers(animeId)).map((s) => ({ ...s, isSubscriber: true }));
+      }
+
+      if (!recipients.length) {
+        return res.json({ ok: true, sent: 0, message: notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó" });
       }
 
       const baseUrl = `https://${req.headers.host}`;
@@ -472,26 +524,27 @@ async function createServer() {
       const subject = `🎌 Új epizód: ${animeTitle} – ${episodeNumber}. rész!`;
 
       let sent = 0;
-      for (const subscriber of subscribers) {
+      for (const recipient of recipients) {
         try {
-          const token = buildUnsubscribeToken(subscriber.userId, animeId);
+          const token = buildUnsubscribeToken(recipient.userId, animeId);
           const unsubscribeLink = `${baseUrl}/api/unsubscribe?token=${token}`;
           const html = buildEpisodeEmailHtml({
-            userName: subscriber.name,
+            userName: recipient.name,
             animeTitle,
             episodeNumber,
             episodeLink,
             unsubscribeLink,
+            isSubscriber: recipient.isSubscriber,
           });
-          await sendEmail({ to: subscriber.email, subject, html });
+          await sendEmail({ to: recipient.email, subject, html });
           sent++;
         } catch (emailErr) {
-          console.warn(`Email hiba (${subscriber.email}):`, emailErr.message);
+          console.warn(`Email hiba (${recipient.email}):`, emailErr.message);
         }
       }
 
-      console.log(`Episode notify: ${sent}/${subscribers.length} e-mail elküldve – ${animeTitle} ${episodeNumber}. rész`);
-      res.json({ ok: true, sent, total: subscribers.length });
+      console.log(`Episode notify (${notifyAllUsers ? "ALL" : "subs"}): ${sent}/${recipients.length} e-mail elküldve – ${animeTitle} ${episodeNumber}. rész`);
+      res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers" });
     } catch (err) {
       console.error("Episode notify error:", err.message);
       res.status(500).json({ ok: false, error: err.message });

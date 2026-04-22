@@ -233,6 +233,7 @@ const EmailSendTab = () => {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [notifyAllUsers, setNotifyAllUsers] = useState(false);
 
   const selectedAnime = animes?.find((a) => a.id === selectedAnimeId);
 
@@ -286,6 +287,7 @@ AxelSub csapata 🎌`);
           animeTitle: selectedAnime.title,
           episodeNumber: selectedEpisode.episode_number,
           animeSlug: selectedAnimeId,
+          notifyAllUsers,
         }),
       });
       if (!res.ok) {
@@ -295,7 +297,7 @@ AxelSub csapata 🎌`);
       }
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      toast.success(`✅ Email elküldve ${data.sent} feliratkozónak!`);
+      toast.success(`✅ Email elküldve ${data.sent} ${notifyAllUsers ? "felhasználónak" : "feliratkozónak"}!`);
     } catch (err: any) {
       console.error("[episode-notify] hiba:", err);
       toast.error(`Hiba: ${err.message}`);
@@ -317,8 +319,23 @@ AxelSub csapata 🎌`);
 
       <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-primary">
         <Sparkles className="h-4 w-4 shrink-0" />
-        Az email csak azoknak megy ki, akik feliratkoztak erre az animére az oldalon.
+        {notifyAllUsers
+          ? "Az email MINDEN regisztrált AxelSub-felhasználónak ki fog menni."
+          : "Az email csak azoknak megy ki, akik feliratkoztak erre az animére az oldalon."}
       </div>
+
+      <label className="flex items-center gap-3 bg-background/40 border border-border/50 rounded-xl px-4 py-3 cursor-pointer hover:border-primary/50 transition">
+        <input
+          type="checkbox"
+          checked={notifyAllUsers}
+          onChange={(e) => setNotifyAllUsers(e.target.checked)}
+          className="h-4 w-4 accent-primary"
+        />
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-foreground">📣 Küldés minden regisztrált felhasználónak</div>
+          <div className="text-xs text-muted-foreground">Bekapcsolva nem csak a feliratkozók, hanem minden AxelSub-tag megkapja az értesítőt.</div>
+        </div>
+      </label>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
@@ -389,7 +406,7 @@ AxelSub csapata 🎌`);
             className="w-full bg-primary hover:bg-primary/90 gap-2 neon-glow"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
-            {sending ? "Küldés folyamatban..." : `Email küldése minden feliratkozónak – ${selectedAnime?.title} ${selectedEpisode.episode_number}. rész`}
+            {sending ? "Küldés folyamatban..." : `Email küldése ${notifyAllUsers ? "MINDEN regisztrált felhasználónak" : "minden feliratkozónak"} – ${selectedAnime?.title} ${selectedEpisode.episode_number}. rész`}
           </Button>
         </div>
       )}

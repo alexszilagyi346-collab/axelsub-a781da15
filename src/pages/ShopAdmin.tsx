@@ -185,9 +185,40 @@ const ProductForm = ({ initial, onDone }: { initial?: Partial<ShopProduct>; onDo
 };
 
 // ---- Order Email Dialog ----
+const CATEGORY_LABEL: Record<string, string> = {
+  polo: "Póló",
+  "póló": "Póló",
+  bogre: "Bögre",
+  "bögre": "Bögre",
+  matrica: "Matrica",
+  poszter: "Poszter",
+  kulcstarto: "Kulcstartó",
+  "kulcstartó": "Kulcstartó",
+  manga: "Manga",
+  egyeb: "Egyéb",
+  "egyéb": "Egyéb",
+};
+const formatCategory = (c?: string | null) => {
+  if (!c) return "Egyéb";
+  return CATEGORY_LABEL[c.toLowerCase()] || c.charAt(0).toUpperCase() + c.slice(1);
+};
+
 const OrderEmailDialog = ({ order, onClose }: { order: ShopOrder; onClose: () => void }) => {
-  const itemsList = (order.shop_order_items || [])
-    .map((i) => `• ${i.product_name} × ${i.quantity}${i.custom_note ? ` (${i.custom_note})` : ""} — ${formatPrice(i.product_price * i.quantity)}`)
+  const { data: products = [] } = useShopProducts();
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  const [includeImages, setIncludeImages] = useState(true);
+
+  const enrichedItems = (order.shop_order_items || []).map((i) => {
+    const p = productMap.get(i.product_id);
+    return {
+      ...i,
+      category: formatCategory(p?.category),
+      image: p?.images?.[0] || null,
+    };
+  });
+
+  const itemsList = enrichedItems
+    .map((i) => `• ${i.product_name} (${i.category}) × ${i.quantity}${i.custom_note ? ` (${i.custom_note})` : ""} — ${formatPrice(i.product_price * i.quantity)}`)
     .join("\n");
 
   const shippingLine = order.shipping_method === "post"
@@ -222,10 +253,44 @@ AxelSub csapata 🎌`;
   const [body, setBody] = useState(botBody);
   const [sending, setSending] = useState(false);
 
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const buildItemsHtml = () => {
+    return enrichedItems
+      .map((i) => {
+        const imgCell = includeImages && i.image
+          ? `<td style="width:90px;padding:0 16px 0 0;vertical-align:top;"><img src="${escapeHtml(i.image)}" alt="${escapeHtml(i.product_name)}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block;"/></td>`
+          : "";
+        return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;border:1px solid #e5e7eb;border-radius:10px;background:#ffffff;"><tr><td style="padding:14px;"><table width="100%" cellpadding="0" cellspacing="0"><tr>${imgCell}<td style="vertical-align:top;">
+<div style="font-size:15px;font-weight:700;color:#1e1e2e;margin-bottom:4px;">${escapeHtml(i.product_name)}</div>
+<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#7c3aed;background:#f3e8ff;padding:3px 8px;border-radius:999px;margin-bottom:8px;">${escapeHtml(i.category)}</div>
+<div style="font-size:13px;color:#475569;">Mennyiség: <strong>${i.quantity}</strong> &nbsp;·&nbsp; Egységár: <strong>${formatPrice(i.product_price)}</strong></div>
+${i.custom_note ? `<div style="font-size:12px;color:#64748b;margin-top:4px;">📝 ${escapeHtml(i.custom_note)}</div>` : ""}
+<div style="font-size:14px;font-weight:700;color:#1e1e2e;margin-top:6px;">Részösszeg: ${formatPrice(i.product_price * i.quantity)}</div>
+</td></tr></table></td></tr></table>`;
+      })
+      .join("");
+  };
+
   const handleSend = async () => {
     setSending(true);
     try {
-      const htmlContent = `<pre style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.7;color:#1e1e2e;white-space:pre-wrap;">${body}</pre>`;
+      const itemsHtml = buildItemsHtml();
+      const bodyHtml = escapeHtml(body).replace(/\n/g, "<br/>");
+      const htmlContent = `<div style="background:#0d0d1a;padding:24px;font-family:'Segoe UI',Arial,sans-serif;">
+<div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+<div style="background:linear-gradient(135deg,#1a0a3a,#2d1060,#1a0a3a);padding:24px 28px;color:#fff;">
+<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c4b5fd;font-weight:700;">AxelSub Shop</div>
+<div style="font-size:22px;font-weight:800;margin-top:6px;">${escapeHtml(subject)}</div>
+</div>
+<div style="padding:24px 28px;color:#1e1e2e;font-size:14px;line-height:1.7;">
+<div style="margin-bottom:18px;">${bodyHtml}</div>
+<div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed;margin:18px 0 10px;">🛍️ Rendelt termékek</div>
+${itemsHtml}
+</div>
+<div style="background:#f8fafc;padding:14px 28px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;text-align:center;">© 2025 AxelSub Shop · Magyar anime közösség</div>
+</div></div>`;
       const res = await fetch(apiUrl("/api/send-custom-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -260,8 +325,17 @@ AxelSub csapata 🎌`;
         <div className="space-y-3 mt-2">
           <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-xs text-primary">
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
-            A bot automatikusan kitöltötte a rendelés adataival. Szabadon szerkeszthető.
+            A bot kitöltötte a rendelés adataival, kategóriával és termékképekkel.
           </div>
+          <label className="flex items-center gap-2 bg-background/40 border border-border/50 rounded-lg px-3 py-2 text-xs text-foreground cursor-pointer hover:border-primary/40 transition">
+            <input
+              type="checkbox"
+              checked={includeImages}
+              onChange={(e) => setIncludeImages(e.target.checked)}
+              className="h-3.5 w-3.5 accent-primary"
+            />
+            <span className="font-medium">🖼️ Termékképek mellékelése az emailben</span>
+          </label>
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">Tárgy</Label>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="glass border-border/50 text-sm" />

@@ -63,11 +63,11 @@ The server loads `.env` automatically via dotenv if present (dev only). In produ
 - Watch history, favorites, watchlist
 - Comment system with replies
 - Ratings (1-10 scale)
-- Notifications & subscriptions
+- Notifications & subscriptions (episode notify can target only subscribers OR all registered users via toggle in Admin panel)
 - Admin panel (role-based access: admin, moderator, shop_manager)
 - Manga reader with chapters
 - Anime/episode request system
-- Shop (products, orders, settings)
+- Shop (products, orders, settings) — order email bot enriches each item with category badge and product image, with toggle to embed images
 - News posts
 - Site settings management
 

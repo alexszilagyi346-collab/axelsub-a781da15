@@ -54,6 +54,54 @@ export async function fetchAnimeSubscribers(animeId) {
   return results;
 }
 
+export async function fetchAllRegisteredUsers() {
+  const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
+
+  const results = [];
+  const seen = new Set();
+  let page = 1;
+  const perPage = 200;
+
+  while (true) {
+    const res = await fetch(
+      `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+      { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    if (!res.ok) break;
+    const data = await res.json();
+    const users = data.users || [];
+    if (!users.length) break;
+
+    const ids = users.map((u) => u.id).filter(Boolean);
+    let profilesMap = new Map();
+    if (ids.length) {
+      const profRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,display_name`,
+        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      if (profRes.ok) {
+        const profiles = await profRes.json();
+        profilesMap = new Map(profiles.map((p) => [p.id, p.display_name]));
+      }
+    }
+
+    for (const u of users) {
+      if (!u.email || seen.has(u.id)) continue;
+      seen.add(u.id);
+      const name = profilesMap.get(u.id) || u.email.split("@")[0];
+      results.push({ email: u.email, name, userId: u.id });
+    }
+
+    if (users.length < perPage) break;
+    page++;
+    if (page > 50) break;
+  }
+
+  return results;
+}
+
 export function setCors(res, req) {
   const ALLOWED = [
     "https://axelsub.eu",
