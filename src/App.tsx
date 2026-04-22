@@ -19,6 +19,7 @@ import Requests from "./pages/Requests";
 import Shop from "./pages/Shop";
 import ShopProduct from "./pages/ShopProduct";
 import ShopAdmin from "./pages/ShopAdmin";
+import OrderDetail from "./pages/OrderDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/manga/:id" element={<ProtectedRoute><MangaDetail /></ProtectedRoute>} />
             <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
             <Route path="/shop" element={<Shop />} />
+            <Route path="/shop/order/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="/shop/:id" element={<ShopProduct />} />
             <Route path="/shop-admin" element={<ProtectedRoute><ShopAdmin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

@@ -267,7 +267,7 @@ Izgalmas hír érkezett – a(z) ${t} legújabb, ${ep}. epizódja megérkezett a
 Ez az epizód tele van izgalommal, fordulatokkal és olyan pillanatokkal, amiket nem akarsz lemaradni! Magyar felirattal, kiváló minőségben, ahogy megszoktad.
 
 👉 Nézd meg most:
-https://axelsub.hu/anime/${selectedAnimeId}
+https://axelsub.eu/anime/${selectedAnimeId}
 
 Ha még nem iratkoztál fel a sorozatra, megteheted az anime oldalán, és az összes új részről értesítünk!
 

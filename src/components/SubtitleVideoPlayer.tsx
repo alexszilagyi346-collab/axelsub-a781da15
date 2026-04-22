@@ -14,6 +14,7 @@ import {
   Settings,
   Server,
   Type,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -419,6 +420,61 @@ const SubtitleVideoPlayer = ({
         return baseUrl;
     }
   }, [currentServer, currentQuality, videoUrl, backupVideoUrl, quality360p, quality480p, quality720p, quality1080p]);
+
+  // --- Daily download limit (per device) ---
+  const DOWNLOAD_DAILY_LIMIT = 3;
+  const downloadStorageKey = "axelsub_dl_count";
+  const getTodayDownloadCount = () => {
+    try {
+      const raw = localStorage.getItem(downloadStorageKey);
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw) as { date: string; count: number };
+      const today = new Date().toISOString().slice(0, 10);
+      return parsed.date === today ? parsed.count : 0;
+    } catch { return 0; }
+  };
+  const incrementDownloadCount = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const current = getTodayDownloadCount();
+    localStorage.setItem(downloadStorageKey, JSON.stringify({ date: today, count: current + 1 }));
+  };
+
+  const handleDownload = () => {
+    if (!user) {
+      toast.error("A letöltéshez bejelentkezés szükséges.");
+      return;
+    }
+    const used = getTodayDownloadCount();
+    if (used >= DOWNLOAD_DAILY_LIMIT) {
+      toast.error(`📛 Napi letöltési limit elérve (${DOWNLOAD_DAILY_LIMIT}/${DOWNLOAD_DAILY_LIMIT}). Próbáld újra holnap!`);
+      return;
+    }
+    const baseUrl = currentServer === "backup" && backupVideoUrl ? backupVideoUrl : videoUrl;
+    const url = currentQuality !== "1080p" ? getCurrentVideoUrl() : baseUrl;
+    const label = currentQuality;
+    if (!url) {
+      toast.error("Nincs elérhető letöltési forrás.");
+      return;
+    }
+    try {
+      const safeTitle = (title || "axelsub").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 60);
+      const ext = url.split("?")[0].split(".").pop()?.toLowerCase() || "mp4";
+      const filename = `${safeTitle}_${label}.${ext}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      incrementDownloadCount();
+      const remaining = DOWNLOAD_DAILY_LIMIT - (used + 1);
+      toast.success(`📥 Letöltés indítva (${label}). Ma még ${remaining} letöltésed van.`);
+    } catch (err: any) {
+      toast.error(`Letöltési hiba: ${err.message}`);
+    }
+  };
 
   // All quality options are always available
   const availableQualities: QualityOption[] = ["1080p", "720p", "480p", "360p"];
@@ -914,6 +970,12 @@ const SubtitleVideoPlayer = ({
           onClick={togglePlay}
           playsInline
           preload="auto"
+          onContextMenu={(e) => { e.preventDefault(); toast.message("🔒 A jobb klikk le van tiltva ezen a videón."); }}
+          controlsList="nodownload noremoteplayback noplaybackrate"
+          disablePictureInPicture
+          disableRemotePlayback
+          /* @ts-expect-error - non-standard but widely supported */
+          x-webkit-airplay="deny"
         >
           {resolvedSubtitleUrl && (
             <track
@@ -1130,6 +1192,20 @@ const SubtitleVideoPlayer = ({
                     </AnimatePresence>
                   </div>
                 )}
+
+                {/* Download button */}
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload();
+                  }}
+                  title={`Letöltés a kiválasztott minőségben – napi limit: ${DOWNLOAD_DAILY_LIMIT}/nap`}
+                >
+                  <Download className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                </motion.button>
 
                 {/* Settings (Quality + Subtitle Size) */}
                 <div className="relative">

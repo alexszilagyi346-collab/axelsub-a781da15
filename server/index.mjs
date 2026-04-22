@@ -427,10 +427,14 @@ async function createServer() {
         : "Személyes átvétel";
       const paymentLine = order.payment_method === "transfer" ? "Banki átutalás" : "Készpénz";
 
+      const orderUrl = `https://axelsub.eu/shop/order/${order.id}`;
       const customerHtml = `
         <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px;margin:0 auto">
           <h2 style="color:#a78bfa;margin-top:0">Köszönjük a rendelésed! 🎉</h2>
-          <p style="margin-bottom:24px">Szia <strong>${order.customer_name}</strong>!<br>Megkaptuk a rendelésedet, és hamarosan felvesszük veled a kapcsolatot.</p>
+          <p style="margin-bottom:16px">Szia <strong>${order.customer_name}</strong>!<br>Megkaptuk a rendelésedet, és hamarosan felvesszük veled a kapcsolatot.</p>
+          <div style="text-align:center;margin:20px 0">
+            <a href="${orderUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:50px">🔍 Rendelés megtekintése az oldalon</a>
+          </div>
           <h3 style="color:#a78bfa;margin-bottom:8px">Rendelés részletei</h3>
           <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
             <tr><td style="padding:4px 0;color:#94a3b8;width:140px">Szállítás:</td><td>${shippingLine}</td></tr>

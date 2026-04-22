@@ -278,6 +278,7 @@ ${i.custom_note ? `<div style="font-size:12px;color:#64748b;margin-top:4px;">�
     try {
       const itemsHtml = buildItemsHtml();
       const bodyHtml = escapeHtml(body).replace(/\n/g, "<br/>");
+      const orderUrl = `https://axelsub.eu/shop/order/${order.id}`;
       const htmlContent = `<div style="background:#0d0d1a;padding:24px;font-family:'Segoe UI',Arial,sans-serif;">
 <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
 <div style="background:linear-gradient(135deg,#1a0a3a,#2d1060,#1a0a3a);padding:24px 28px;color:#fff;">
@@ -286,6 +287,9 @@ ${i.custom_note ? `<div style="font-size:12px;color:#64748b;margin-top:4px;">�
 </div>
 <div style="padding:24px 28px;color:#1e1e2e;font-size:14px;line-height:1.7;">
 <div style="margin-bottom:18px;">${bodyHtml}</div>
+<div style="text-align:center;margin:18px 0 22px;">
+<a href="${orderUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:50px;box-shadow:0 4px 14px rgba(124,58,237,0.35);">🔍 Rendelés megtekintése az oldalon</a>
+</div>
 <div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#7c3aed;margin:18px 0 10px;">🛍️ Rendelt termékek</div>
 ${itemsHtml}
 </div>
@@ -823,7 +827,7 @@ const ShopAdmin = () => {
                   <div>
                     <Label>E-mail</Label>
                     <Input value={sf.shop_email || ""} onChange={(e) => setSettingsForm({ ...(sf), shop_email: e.target.value })}
-                      className="mt-1 glass border-border/50" placeholder="bolt@axelsub.hu" />
+                      className="mt-1 glass border-border/50" placeholder="bolt@axelsub.eu" />
                   </div>
                   <div>
                     <Label>Telefonszám</Label>
