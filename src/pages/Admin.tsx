@@ -297,7 +297,11 @@ AxelSub csapata 🎌`);
       }
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      toast.success(`✅ Email elküldve ${data.sent} ${notifyAllUsers ? "felhasználónak" : "feliratkozónak"}!`);
+      if (data.sent === 0) {
+        toast.warning(data.message || data.error || `Nincs címzett (${notifyAllUsers ? "regisztrált felhasználó" : "feliratkozó"})!`);
+      } else {
+        toast.success(`✅ Email elküldve ${data.sent}/${data.total ?? data.sent} ${notifyAllUsers ? "felhasználónak" : "feliratkozónak"}!`);
+      }
     } catch (err: any) {
       console.error("[episode-notify] hiba:", err);
       toast.error(`Hiba: ${err.message}`);
@@ -445,10 +449,25 @@ const Admin = () => {
   useEffect(() => {
     if (!canAccess) return;
     const fetchStats = async () => {
+      // Try client-side count first
       const { count: userCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true });
-      setTotalUsers(userCount || 0);
+      let total = userCount || 0;
+
+      // If client-side returns 0 (RLS may hide rows), ask the server using service key
+      if (total === 0) {
+        try {
+          const r = await fetch(apiUrl("/api/user-stats"));
+          if (r.ok) {
+            const data = await r.json();
+            if (data.ok && typeof data.total === "number") total = data.total;
+          }
+        } catch {
+          // ignore – we'll show whatever client returned
+        }
+      }
+      setTotalUsers(total);
 
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count: viewerCount } = await supabase

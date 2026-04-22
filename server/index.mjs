@@ -140,43 +140,126 @@ async function createServer() {
     new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
 
   // --- Episode notification helpers ---
+  // Returns { users: [...], error: string | null }
+  // Smart fetcher: tries auth.users admin endpoint, falls back to profiles table.
   async function fetchAllRegisteredUsers() {
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return [];
+    if (!SUPABASE_URL) return { users: [], error: "VITE_SUPABASE_URL nincs beállítva" };
+    if (!SUPABASE_SERVICE_KEY) {
+      return { users: [], error: "SUPABASE_SERVICE_ROLE_KEY nincs beállítva – állítsd be a Replit Secrets-ben, hogy a rendszer minden regisztrált felhasználót lásson." };
+    }
+
     const out = [];
     const seen = new Set();
-    let page = 1;
-    const perPage = 200;
-    while (true) {
-      const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {
-        headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
-      });
-      if (!r.ok) break;
-      const data = await r.json();
-      const users = data.users || [];
-      if (!users.length) break;
-      const ids = users.map((u) => u.id).filter(Boolean);
-      let profilesMap = new Map();
-      if (ids.length) {
-        const profRes = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?id=in.(${ids.join(",")})&select=id,display_name`,
-          { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
-        );
-        if (profRes.ok) {
-          const profiles = await profRes.json();
-          profilesMap = new Map(profiles.map((p) => [p.id, p.display_name]));
+
+    // Primary: paginated auth.users admin endpoint (has email + id)
+    let usedAuthAdmin = false;
+    try {
+      let page = 1;
+      const perPage = 200;
+      while (true) {
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`, {
+          headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+        });
+        if (!r.ok) {
+          console.warn(`[fetchAllRegisteredUsers] auth.users page ${page} -> ${r.status}`);
+          break;
         }
+        usedAuthAdmin = true;
+        const data = await r.json();
+        const users = data.users || [];
+        if (!users.length) break;
+        for (const u of users) {
+          if (!u.email || seen.has(u.id)) continue;
+          seen.add(u.id);
+          out.push({ email: u.email, name: u.email.split("@")[0], userId: u.id });
+        }
+        if (users.length < perPage) break;
+        page++;
+        if (page > 100) break;
       }
-      for (const u of users) {
-        if (!u.email || seen.has(u.id)) continue;
-        seen.add(u.id);
-        const name = profilesMap.get(u.id) || u.email.split("@")[0];
-        out.push({ email: u.email, name, userId: u.id });
-      }
-      if (users.length < perPage) break;
-      page++;
-      if (page > 50) break;
+    } catch (e) {
+      console.warn("[fetchAllRegisteredUsers] auth.users failed:", e.message);
     }
-    return out;
+
+    // Fallback / enrichment: profiles table (paginated via Range header)
+    // Always read profiles to enrich display names AND to catch users not returned by auth admin.
+    try {
+      const pageSize = 1000;
+      let from = 0;
+      const profilesById = new Map();
+      while (true) {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?select=user_id,display_name,email&order=created_at.asc`,
+          {
+            headers: {
+              apikey: SUPABASE_SERVICE_KEY,
+              Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+              Range: `${from}-${from + pageSize - 1}`,
+              "Range-Unit": "items",
+              Prefer: "count=exact",
+            },
+          }
+        );
+        if (!r.ok) {
+          console.warn(`[fetchAllRegisteredUsers] profiles range ${from} -> ${r.status}`);
+          break;
+        }
+        const rows = await r.json();
+        if (!rows.length) break;
+        for (const p of rows) profilesById.set(p.user_id, p);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+        if (from > 100000) break;
+      }
+
+      // Enrich existing users with display names
+      for (const u of out) {
+        const p = profilesById.get(u.userId);
+        if (p?.display_name) u.name = p.display_name;
+      }
+
+      // Add any profiles that weren't in the auth list (some setups don't expose admin/users)
+      for (const [id, p] of profilesById) {
+        if (seen.has(id)) continue;
+        const email = p.email;
+        if (!email) continue;
+        seen.add(id);
+        out.push({ email, name: p.display_name || email.split("@")[0], userId: id });
+      }
+    } catch (e) {
+      console.warn("[fetchAllRegisteredUsers] profiles fallback failed:", e.message);
+    }
+
+    if (!out.length && !usedAuthAdmin) {
+      return {
+        users: [],
+        error: "Nem sikerült lekérni a felhasználókat. Ellenőrizd a SUPABASE_SERVICE_ROLE_KEY-t.",
+      };
+    }
+    return { users: out, error: null };
+  }
+
+  // Lightweight count from profiles table (works whenever service key is set)
+  async function fetchUserCount() {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id`, {
+        method: "HEAD",
+        headers: {
+          apikey: SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          Prefer: "count=exact",
+          Range: "0-0",
+        },
+      });
+      const cr = r.headers.get("content-range");
+      if (!cr) return null;
+      const total = parseInt(cr.split("/")[1], 10);
+      return Number.isFinite(total) ? total : null;
+    } catch (e) {
+      console.warn("[fetchUserCount] failed:", e.message);
+      return null;
+    }
   }
 
   async function fetchAnimeSubscribers(animeId) {
@@ -190,29 +273,50 @@ async function createServer() {
     const subs = await subsRes.json();
     if (!subs.length) return [];
 
-    const results = [];
-    for (const { user_id } of subs) {
-      try {
-        const [userRes, profileRes] = await Promise.all([
-          fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user_id}`, {
-            headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
-          }),
-          fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user_id}&select=display_name`, {
-            headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
-          }),
-        ]);
+    const userIds = subs.map((s) => s.user_id).filter(Boolean);
+    if (!userIds.length) return [];
 
+    // Bulk fetch profiles in one request (much faster than per-user calls)
+    const profRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?user_id=in.(${userIds.join(",")})&select=user_id,email,display_name`,
+      { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+    );
+    const profilesById = new Map();
+    if (profRes.ok) {
+      const rows = await profRes.json();
+      for (const p of rows) profilesById.set(p.user_id, p);
+    }
+
+    const results = [];
+    const missingEmail = [];
+    for (const user_id of userIds) {
+      const p = profilesById.get(user_id);
+      if (p?.email) {
+        results.push({
+          email: p.email,
+          name: p.display_name || p.email.split("@")[0],
+          userId: user_id,
+        });
+      } else {
+        missingEmail.push(user_id);
+      }
+    }
+
+    // For users without email in profiles, fall back to auth.users
+    for (const user_id of missingEmail) {
+      try {
+        const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user_id}`, {
+          headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+        });
         if (!userRes.ok) continue;
         const user = await userRes.json();
         if (!user.email) continue;
-
-        let displayName = user.email.split("@")[0];
-        if (profileRes.ok) {
-          const profiles = await profileRes.json();
-          if (profiles[0]?.display_name) displayName = profiles[0].display_name;
-        }
-
-        results.push({ email: user.email, name: displayName, userId: user_id });
+        const p = profilesById.get(user_id);
+        results.push({
+          email: user.email,
+          name: p?.display_name || user.email.split("@")[0],
+          userId: user_id,
+        });
       } catch {
         continue;
       }
@@ -506,13 +610,15 @@ async function createServer() {
       }
 
       let recipients = [];
+      let fetchError = null;
       if (notifyAllUsers) {
-        const [allUsers, subs] = await Promise.all([
+        const [allUsersResult, subs] = await Promise.all([
           fetchAllRegisteredUsers(),
           fetchAnimeSubscribers(animeId),
         ]);
+        fetchError = allUsersResult.error;
         const map = new Map();
-        for (const u of allUsers) map.set(u.userId, { ...u, isSubscriber: false });
+        for (const u of allUsersResult.users) map.set(u.userId, { ...u, isSubscriber: false });
         for (const s of subs) map.set(s.userId, { ...s, isSubscriber: true });
         recipients = Array.from(map.values());
       } else {
@@ -520,7 +626,13 @@ async function createServer() {
       }
 
       if (!recipients.length) {
-        return res.json({ ok: true, sent: 0, message: notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó" });
+        return res.json({
+          ok: true,
+          sent: 0,
+          total: 0,
+          message: fetchError || (notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó"),
+          error: fetchError,
+        });
       }
 
       const baseUrl = `https://${req.headers.host}`;
@@ -552,6 +664,26 @@ async function createServer() {
     } catch (err) {
       console.error("Episode notify error:", err.message);
       res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  // --- User stats (used by Admin dashboard for accurate user count) ---
+  app.get("/api/user-stats", async (req, res) => {
+    try {
+      const total = await fetchUserCount();
+      if (total == null) {
+        return res.json({
+          ok: false,
+          total: 0,
+          error: SUPABASE_SERVICE_KEY
+            ? "Nem sikerült lekérni a felhasználói statisztikát."
+            : "SUPABASE_SERVICE_ROLE_KEY nincs beállítva.",
+        });
+      }
+      res.json({ ok: true, total });
+    } catch (err) {
+      console.error("user-stats error:", err.message);
+      res.status(500).json({ ok: false, total: 0, error: err.message });
     }
   });
 

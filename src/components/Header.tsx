@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, LogOut, Settings, History, ChevronDown, Newspaper, Facebook, BookOpen, MessageSquare, ShoppingBag } from "lucide-react";
+import { User, LogOut, Settings, History, ChevronDown, Newspaper, Facebook, BookOpen, MessageSquare, ShoppingBag } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import AuthModal from "@/components/AuthModal";
+import HeaderSearch from "@/components/HeaderSearch";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useIsModerator } from "@/hooks/useIsModerator";
@@ -176,9 +177,7 @@ const Header = () => {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg">
-                <Search className="h-4 w-4" />
-              </Button>
+              <HeaderSearch className="text-muted-foreground hover:text-foreground hover:bg-primary/10 rounded-lg" />
 
               {user && <NotificationBell />}
 

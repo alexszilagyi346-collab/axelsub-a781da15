@@ -14,7 +14,12 @@ const Browse = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const statusParam = searchParams.get("status");
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryParam = searchParams.get("q") || "";
+  const [searchQuery, setSearchQuery] = useState(queryParam);
+
+  useEffect(() => {
+    setSearchQuery(queryParam);
+  }, [queryParam]);
   const [filters, setFilters] = useState<FilterState>({
     genre: "",
     year: "",
