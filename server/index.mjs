@@ -687,6 +687,58 @@ async function createServer() {
     }
   });
 
+  // --- Notify admins/moderators about a new anime request ---
+  app.post("/api/notify-admins-new-request", async (req, res) => {
+    try {
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+        return res.status(500).json({ ok: false, error: "Supabase service key nincs beállítva" });
+      }
+      const { requestId, title, requesterEmail } = req.body || {};
+      if (!title) return res.status(400).json({ ok: false, error: "Hiányzó cím" });
+
+      // Fetch admin + moderator user_ids
+      const rolesResp = await fetch(
+        `${SUPABASE_URL}/rest/v1/user_roles?role=in.(admin,moderator)&select=user_id`,
+        { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      if (!rolesResp.ok) {
+        const text = await rolesResp.text();
+        return res.status(500).json({ ok: false, error: `user_roles: ${text}` });
+      }
+      const roles = await rolesResp.json();
+      const userIds = [...new Set((roles || []).map((r) => r.user_id).filter(Boolean))];
+      if (userIds.length === 0) return res.json({ ok: true, notified: 0 });
+
+      const rows = userIds.map((uid) => ({
+        user_id: uid,
+        type: "system",
+        title: "Új anime kérés",
+        message: `${requesterEmail ? requesterEmail + " kért: " : ""}${title}`,
+        link: "/requests",
+        is_read: false,
+      }));
+
+      const insertResp = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_SERVICE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(rows),
+      });
+      if (!insertResp.ok) {
+        const text = await insertResp.text();
+        return res.status(500).json({ ok: false, error: `notifications insert: ${text}` });
+      }
+      res.json({ ok: true, notified: userIds.length });
+    } catch (err) {
+      console.error("notify-admins-new-request error:", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // --- Custom email send (admin) ---
   app.post("/api/send-custom-email", async (req, res) => {
     try {

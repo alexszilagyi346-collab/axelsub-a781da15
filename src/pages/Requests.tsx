@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useIsModerator } from "@/hooks/useIsModerator";
 import { supabase } from "@/integrations/supabase/client";
+import { apiUrl } from "@/lib/api";
 import { toast } from "sonner";
 
 interface AnimeRequest {
@@ -238,18 +239,32 @@ const Requests = () => {
     if (!user) { toast.error("Be kell jelentkezned!"); return; }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("anime_requests").insert({
-        user_id: user.id,
-        user_email: user.email,
-        title: title.trim(),
-        message: message.trim() || null,
-        status: "pending",
-      });
+      const { data: inserted, error } = await supabase
+        .from("anime_requests")
+        .insert({
+          user_id: user.id,
+          user_email: user.email,
+          title: title.trim(),
+          message: message.trim() || null,
+          status: "pending",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
       toast.success("Kérés elküldve!");
       setTitle("");
       setMessage("");
       refetch();
+      // Fire-and-forget admin notification — never block the UI on this
+      fetch(apiUrl("/api/notify-admins-new-request"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: inserted?.id,
+          title: title.trim(),
+          requesterEmail: user.email,
+        }),
+      }).catch(() => {});
     } catch (e: any) {
       toast.error(e.message || "Hiba történt!");
     } finally {
