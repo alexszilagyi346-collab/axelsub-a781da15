@@ -443,19 +443,24 @@ const Admin = () => {
   const [episodeManagerAnime, setEpisodeManagerAnime] = useState<Anime | null>(null);
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeViewers, setActiveViewers] = useState(0);
-  
+  const [liveViewers, setLiveViewers] = useState(0);
+  const [topWatched, setTopWatched] = useState<Array<{ id: string; title: string; image_url: string | null; view_count: number }>>([]);
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState<Date | null>(null);
+  const [statsPulse, setStatsPulse] = useState(false);
+
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Live stats: poll every 15s for users + viewers + top watched
   useEffect(() => {
     if (!canAccess) return;
+    let cancelled = false;
+
     const fetchStats = async () => {
-      // Try client-side count first
+      // 1) Registered users count (with server-side fallback)
       const { count: userCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true });
       let total = userCount || 0;
-
-      // If client-side returns 0 (RLS may hide rows), ask the server using service key
       if (total === 0) {
         try {
           const r = await fetch(apiUrl("/api/user-stats"));
@@ -463,20 +468,46 @@ const Admin = () => {
             const data = await r.json();
             if (data.ok && typeof data.total === "number") total = data.total;
           }
-        } catch {
-          // ignore – we'll show whatever client returned
-        }
+        } catch {}
       }
-      setTotalUsers(total);
 
+      // 2) Active viewers in last 24h
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count: viewerCount } = await supabase
         .from("watch_history")
         .select("user_id", { count: "exact", head: true })
         .gte("last_watched_at", yesterday);
+
+      // 3) Live viewers: anyone with watch_history activity in the last 5 minutes
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { count: liveCount } = await supabase
+        .from("watch_history")
+        .select("user_id", { count: "exact", head: true })
+        .gte("last_watched_at", fiveMinAgo);
+
+      // 4) Top 5 most watched animes (by view_count)
+      const { data: top } = await supabase
+        .from("animes")
+        .select("id, title, image_url, view_count" as any)
+        .order("view_count" as any, { ascending: false, nullsFirst: false })
+        .limit(5);
+
+      if (cancelled) return;
+      setTotalUsers(total);
       setActiveViewers(viewerCount || 0);
+      setLiveViewers(liveCount || 0);
+      setTopWatched((top as any) || []);
+      setStatsUpdatedAt(new Date());
+      setStatsPulse(true);
+      setTimeout(() => !cancelled && setStatsPulse(false), 600);
     };
+
     fetchStats();
+    const interval = setInterval(fetchStats, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [canAccess]);
 
   if (authLoading || adminLoading || modLoading) {
@@ -612,30 +643,107 @@ const Admin = () => {
       
       <main className="pt-24 pb-12">
         <div className="container mx-auto px-4">
+          {/* Live indicator */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="font-semibold text-green-500">LIVE</span>
+              <span>· automatikus frissítés 15 másodpercenként</span>
+            </div>
+            {statsUpdatedAt && (
+              <span className="text-xs text-muted-foreground">
+                Frissítve: {statsUpdatedAt.toLocaleTimeString("hu-HU")}
+              </span>
+            )}
+          </div>
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className={`bg-card border rounded-xl p-5 flex items-center gap-4 transition-colors ${statsPulse ? "border-primary/60" : "border-border"}`}>
               <div className="p-3 rounded-lg bg-primary/10"><Users className="h-6 w-6 text-primary" /></div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{totalUsers}</p>
                 <p className="text-sm text-muted-foreground">Regisztrált felhasználó</p>
+              </div>
+            </div>
+            <div className={`bg-card border rounded-xl p-5 flex items-center gap-4 transition-colors ${statsPulse ? "border-green-500/60" : "border-border"}`}>
+              <div className="p-3 rounded-lg bg-green-500/10 relative">
+                <Eye className="h-6 w-6 text-green-500" />
+                {liveViewers > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{liveViewers}</p>
+                <p className="text-sm text-muted-foreground">Most néz (élő)</p>
               </div>
             </div>
             <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
               <div className="p-3 rounded-lg bg-primary/10"><Eye className="h-6 w-6 text-primary" /></div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{activeViewers}</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{activeViewers}</p>
                 <p className="text-sm text-muted-foreground">Aktív néző (24h)</p>
               </div>
             </div>
             <div className="bg-card border border-border rounded-xl p-5 flex items-center gap-4">
               <div className="p-3 rounded-lg bg-primary/10"><Film className="h-6 w-6 text-primary" /></div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{animes?.length || 0}</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{animes?.length || 0}</p>
                 <p className="text-sm text-muted-foreground">Összes anime</p>
               </div>
             </div>
           </div>
+
+          {/* Top watched animes */}
+          {topWatched.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-5 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Legnézettebb animék
+                </h3>
+                <span className="text-xs text-muted-foreground">élő · összes idő</span>
+              </div>
+              <div className="space-y-2">
+                {topWatched.map((a, i) => {
+                  const max = topWatched[0]?.view_count || 1;
+                  const pct = Math.max(4, Math.round(((a.view_count || 0) / max) * 100));
+                  return (
+                    <div key={a.id} className="flex items-center gap-3">
+                      <span className={`shrink-0 w-7 text-center text-sm font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-slate-300" : i === 2 ? "text-orange-400" : "text-muted-foreground"}`}>
+                        #{i + 1}
+                      </span>
+                      {a.image_url ? (
+                        <img src={a.image_url} alt={a.title} className="w-8 h-11 object-cover rounded shrink-0" loading="lazy" />
+                      ) : (
+                        <div className="w-8 h-11 bg-muted rounded shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-sm text-foreground truncate font-medium">{a.title}</span>
+                          <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                            {(a.view_count || 0).toLocaleString("hu-HU")} megtekintés
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-background rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <Tabs defaultValue="animes" className="w-full">
             <TabsList className="mb-6 flex-wrap h-auto gap-1">
