@@ -604,14 +604,36 @@ async function createServer() {
   // --- Episode notification endpoint ---
   app.post("/api/episode-notify", async (req, res) => {
     try {
-      const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers } = req.body;
+      const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers, recipients: clientRecipients } = req.body;
       if (!animeId || !animeTitle || !episodeNumber) {
         return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
       }
 
       let recipients = [];
       let fetchError = null;
-      if (notifyAllUsers) {
+
+      // If the admin client already gathered the user list (via a SECURITY DEFINER
+      // RPC, which works without the service role key), trust that list and only
+      // merge subscriber flags. This is the path used when SUPABASE_SERVICE_ROLE_KEY
+      // is unavailable.
+      if (notifyAllUsers && Array.isArray(clientRecipients) && clientRecipients.length > 0) {
+        const subs = await fetchAnimeSubscribers(animeId);
+        const map = new Map();
+        for (const u of clientRecipients) {
+          if (!u || !u.email) continue;
+          map.set(u.userId || u.user_id || u.email, {
+            email: u.email,
+            name: u.name || u.display_name || u.email.split("@")[0],
+            userId: u.userId || u.user_id,
+            isSubscriber: false,
+          });
+        }
+        for (const s of subs) {
+          const key = s.userId || s.email;
+          map.set(key, { ...(map.get(key) || s), ...s, isSubscriber: true });
+        }
+        recipients = Array.from(map.values());
+      } else if (notifyAllUsers) {
         const [allUsersResult, subs] = await Promise.all([
           fetchAllRegisteredUsers(),
           fetchAnimeSubscribers(animeId),

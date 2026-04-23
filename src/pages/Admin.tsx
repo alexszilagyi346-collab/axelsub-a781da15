@@ -279,6 +279,29 @@ AxelSub csapata 🎌`);
     if (!selectedAnime || !selectedEpisode) return toast.error("Válassz animét és epizódot!");
     setSending(true);
     try {
+      // If sending to everyone, fetch the user list directly via RPC
+      // (this works without service-role key — uses SECURITY DEFINER function).
+      let recipients: Array<{ userId: string; email: string; name: string }> = [];
+      if (notifyAllUsers) {
+        const { data, error } = await supabase.rpc("get_all_users_for_email" as any);
+        if (error) {
+          throw new Error(
+            `Felhasználói lista lekérése sikertelen: ${error.message}. ` +
+            `Futtatd le a get_all_users_for_email() SQL függvényt a Supabase SQL editorban!`
+          );
+        }
+        recipients = ((data as any[]) || [])
+          .filter((u) => u && u.email)
+          .map((u) => ({
+            userId: u.user_id,
+            email: u.email,
+            name: u.display_name || (u.email as string).split("@")[0],
+          }));
+        if (recipients.length === 0) {
+          throw new Error("Nincs regisztrált felhasználó a listában (RPC üres listát adott vissza).");
+        }
+      }
+
       const res = await fetch(apiUrl("/api/episode-notify"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -288,6 +311,7 @@ AxelSub csapata 🎌`);
           episodeNumber: selectedEpisode.episode_number,
           animeSlug: selectedAnimeId,
           notifyAllUsers,
+          recipients,
         }),
       });
       if (!res.ok) {
@@ -456,19 +480,20 @@ const Admin = () => {
     let cancelled = false;
 
     const fetchStats = async () => {
-      // 1) Registered users count (with server-side fallback)
-      const { count: userCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
-      let total = userCount || 0;
-      if (total === 0) {
-        try {
-          const r = await fetch(apiUrl("/api/user-stats"));
-          if (r.ok) {
-            const data = await r.json();
-            if (data.ok && typeof data.total === "number") total = data.total;
-          }
-        } catch {}
+      // 1) Registered users count — prefer the SECURITY DEFINER RPC that reads
+      //    auth.users (works without service key); fall back to profiles count.
+      let total = 0;
+      try {
+        const { data: rpcCount, error: rpcErr } = await supabase.rpc(
+          "get_total_user_count" as any
+        );
+        if (!rpcErr && typeof rpcCount === "number") total = rpcCount;
+      } catch {}
+      if (!total) {
+        const { count: userCount } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true });
+        total = userCount || 0;
       }
 
       // 2) Active viewers in last 24h
