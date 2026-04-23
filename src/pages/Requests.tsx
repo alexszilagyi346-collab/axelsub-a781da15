@@ -92,6 +92,21 @@ const RequestCard = ({
           .then(({ error: notifyErr }) => {
             if (notifyErr) console.warn("notify_request_status_change:", notifyErr.message);
           });
+
+        // Email the requester too (best-effort)
+        if (request.user_email) {
+          fetch("/api/notify-request-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: request.user_email,
+              name: request.user_email.split("@")[0],
+              title: request.title,
+              status: newStatus,
+              adminNote: adminNote || null,
+            }),
+          }).catch((err) => console.warn("notify-request-status email:", err?.message));
+        }
       }
 
       toast.success("Kérés frissítve!");

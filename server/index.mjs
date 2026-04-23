@@ -709,6 +709,53 @@ async function createServer() {
     }
   });
 
+  // --- Notify a request submitter via email when status changes ---
+  app.post("/api/notify-request-status", async (req, res) => {
+    try {
+      const { email, name, title, status, adminNote } = req.body || {};
+      if (!email || !title || !status) {
+        return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
+      }
+      const isApproved = status === "approved";
+      const isRejected = status === "rejected";
+      const emoji = isApproved ? "✅" : isRejected ? "❌" : "⏳";
+      const headline = isApproved
+        ? "Elfogadtuk a kérésedet!"
+        : isRejected
+        ? "Sajnos elutasítottuk a kérésedet"
+        : "A kérésed státusza frissült";
+      const subject = `${emoji} ${headline} – ${title}`;
+      const greetingName = name || (email.includes("@") ? email.split("@")[0] : "Felhasználó");
+      const noteHtml = adminNote && String(adminNote).trim().length > 0
+        ? `<p style="margin:16px 0;padding:12px 16px;background:#1f2937;border-left:3px solid #f97316;border-radius:6px;color:#e5e7eb;"><strong style="color:#fbbf24;">Admin megjegyzés:</strong><br>${String(adminNote).replace(/</g, "&lt;").replace(/\n/g, "<br>")}</p>`
+        : "";
+      const baseUrl = `https://${req.headers.host}`;
+      const html = `<!doctype html><html><body style="margin:0;padding:0;background:#0b0f1a;font-family:Arial,sans-serif;color:#e5e7eb;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0b0f1a;padding:24px 0;"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;overflow:hidden;">
+<tr><td style="padding:24px 32px;background:linear-gradient(135deg,#7c3aed,#ec4899);">
+<h1 style="margin:0;color:white;font-size:22px;">${emoji} AxelSub – Anime kérés</h1>
+</td></tr>
+<tr><td style="padding:28px 32px;">
+<p style="margin:0 0 12px 0;font-size:16px;">Szia <strong>${greetingName}</strong>!</p>
+<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">${headline}</p>
+<p style="margin:0 0 8px 0;font-size:18px;color:#fbbf24;"><strong>${title}</strong></p>
+${noteHtml}
+<p style="text-align:center;margin:24px 0;">
+<a href="${baseUrl}/requests" style="display:inline-block;background:#7c3aed;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Kérések megtekintése</a>
+</p>
+<p style="margin:24px 0 0 0;font-size:13px;color:#9ca3af;text-align:center;">Köszönjük, hogy az AxelSub-ot használod! 🎌</p>
+</td></tr>
+</table>
+</td></tr></table></body></html>`;
+      await sendEmail({ to: email, subject, html });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("notify-request-status error:", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // --- Notify admins/moderators about a new anime request ---
   app.post("/api/notify-admins-new-request", async (req, res) => {
     try {
