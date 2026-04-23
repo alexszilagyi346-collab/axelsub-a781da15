@@ -80,6 +80,20 @@ const RequestCard = ({
         .update({ status: newStatus, admin_note: adminNote, updated_at: new Date().toISOString() })
         .eq("id", request.id);
       if (error) throw error;
+
+      // Notify the request submitter (fire-and-forget — never block the UI on this)
+      if (newStatus !== request.status) {
+        supabase
+          .rpc("notify_request_status_change" as any, {
+            p_request_id: request.id,
+            p_new_status: newStatus,
+            p_admin_note: adminNote || null,
+          })
+          .then(({ error: notifyErr }) => {
+            if (notifyErr) console.warn("notify_request_status_change:", notifyErr.message);
+          });
+      }
+
       toast.success("Kérés frissítve!");
       onUpdate();
     } catch (e: any) {
