@@ -1,7 +1,20 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Send, Clock, CheckCircle, XCircle, Loader2, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import {
+  MessageSquare,
+  Send,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  ThumbsUp,
+  TrendingUp,
+  Calendar,
+} from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +51,19 @@ const RequestCard = ({
   request,
   isOwn,
   canManage,
+  voteCount,
+  hasVoted,
+  onVoteToggle,
+  voting,
   onUpdate,
 }: {
   request: AnimeRequest;
   isOwn: boolean;
   canManage: boolean;
+  voteCount: number;
+  hasVoted: boolean;
+  onVoteToggle: () => void;
+  voting: boolean;
   onUpdate: () => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -89,10 +110,27 @@ const RequestCard = ({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      layout
       className="bg-card border border-border rounded-xl overflow-hidden"
     >
       <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          {/* Vote button */}
+          <button
+            onClick={onVoteToggle}
+            disabled={voting || isOwn}
+            title={isOwn ? "A saját kérésedre nem szavazhatsz" : hasVoted ? "Szavazat visszavonása" : "Szavazat leadása"}
+            className={`shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-lg border transition-all ${
+              hasVoted
+                ? "bg-primary/15 border-primary text-primary"
+                : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+            } ${isOwn ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:scale-[1.03]"}`}
+            data-testid={`button-vote-${request.id}`}
+          >
+            <ThumbsUp className={`h-4 w-4 mb-0.5 ${hasVoted ? "fill-current" : ""}`} />
+            <span className="text-sm font-bold tabular-nums">{voteCount}</span>
+          </button>
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h3 className="font-semibold text-foreground truncate">{request.title}</h3>
@@ -100,10 +138,10 @@ const RequestCard = ({
                 <Icon className="h-3 w-3" />
                 {cfg.label}
               </Badge>
+              {isOwn && (
+                <Badge variant="outline" className="text-xs">Saját</Badge>
+              )}
             </div>
-            {isOwn && request.user_email && (
-              <p className="text-xs text-muted-foreground">{request.user_email}</p>
-            )}
             {canManage && request.user_email && (
               <p className="text-xs text-muted-foreground">{request.user_email}</p>
             )}
@@ -111,9 +149,10 @@ const RequestCard = ({
               {new Date(request.created_at).toLocaleDateString("hu-HU", { year: "numeric", month: "short", day: "numeric" })}
             </p>
           </div>
+
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground shrink-0"
+            className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground shrink-0 self-start"
           >
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
@@ -212,26 +251,77 @@ const Requests = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"top" | "new">("top");
   const [submitting, setSubmitting] = useState(false);
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const { data: requests, isLoading, refetch } = useQuery({
-    queryKey: ["anime_requests", canManage],
+    queryKey: ["anime_requests"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("anime_requests")
         .select("*")
         .order("created_at", { ascending: false });
-
-      if (!canManage) {
-        query = query.eq("user_id", user?.id || "");
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as AnimeRequest[];
     },
     enabled: !!user,
   });
+
+  // All votes (count per request, and which requests current user voted on)
+  const { data: votes, refetch: refetchVotes } = useQuery({
+    queryKey: ["anime_request_votes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("anime_request_votes" as any)
+        .select("request_id, user_id");
+      if (error) throw error;
+      return (data || []) as Array<{ request_id: string; user_id: string }>;
+    },
+    enabled: !!user,
+  });
+
+  const voteCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    (votes || []).forEach((v) => m.set(v.request_id, (m.get(v.request_id) || 0) + 1));
+    return m;
+  }, [votes]);
+
+  const myVotes = useMemo(() => {
+    const s = new Set<string>();
+    (votes || []).forEach((v) => {
+      if (v.user_id === user?.id) s.add(v.request_id);
+    });
+    return s;
+  }, [votes, user?.id]);
+
+  const handleVote = async (requestId: string, currentlyVoted: boolean) => {
+    if (!user) {
+      toast.error("Be kell jelentkezned a szavazáshoz!");
+      return;
+    }
+    setVotingId(requestId);
+    try {
+      if (currentlyVoted) {
+        const { error } = await supabase
+          .from("anime_request_votes" as any)
+          .delete()
+          .eq("request_id", requestId)
+          .eq("user_id", user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("anime_request_votes" as any)
+          .insert({ request_id: requestId, user_id: user.id });
+        if (error) throw error;
+      }
+      await refetchVotes();
+    } catch (e: any) {
+      toast.error(e.message || "Hiba a szavazás során!");
+    } finally {
+      setVotingId(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,7 +345,6 @@ const Requests = () => {
       setTitle("");
       setMessage("");
       refetch();
-      // Fire-and-forget admin notification — never block the UI on this
       fetch(apiUrl("/api/notify-admins-new-request"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -272,9 +361,18 @@ const Requests = () => {
     }
   };
 
-  const filtered = (requests || []).filter((r) => {
-    return statusFilter === "all" || r.status === statusFilter;
-  });
+  const filtered = useMemo(() => {
+    const list = (requests || []).filter((r) => statusFilter === "all" || r.status === statusFilter);
+    if (sortBy === "top") {
+      return [...list].sort((a, b) => {
+        const av = voteCounts.get(a.id) || 0;
+        const bv = voteCounts.get(b.id) || 0;
+        if (bv !== av) return bv - av;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
+    return list; // already ordered by created_at desc
+  }, [requests, statusFilter, sortBy, voteCounts]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -287,104 +385,126 @@ const Requests = () => {
               Anime kérések
             </h1>
             <p className="text-muted-foreground">
-              {canManage
-                ? "Összes felhasználói anime kérés kezelése."
-                : "Kérj animéket, amiket szeretnél látni a platformon!"}
+              Kérj animéket, és szavazz a többiek kéréseire — a legnépszerűbbek kerülnek előre!
             </p>
           </div>
 
-          {/* Request Form */}
-          {!canManage && (
-            <div className="bg-card border border-border rounded-xl p-6 mb-8">
-              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Send className="h-5 w-5 text-primary" />
-                Új anime kérés
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="req-title">Anime neve *</Label>
-                  <Input
-                    id="req-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="pl. Demon Slayer, Attack on Titan..."
-                    className="bg-background"
-                    required
-                    data-testid="input-request-title"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="req-message">Megjegyzés (opcionális)</Label>
-                  <Textarea
-                    id="req-message"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Miért szeretnéd látni? Van megjegyzésed?"
-                    className="bg-background min-h-[80px]"
-                    data-testid="textarea-request-message"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="gap-2"
-                  data-testid="button-submit-request"
-                >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Kérés küldése
-                </Button>
-              </form>
-            </div>
-          )}
+          {/* Request Form (everyone can submit) */}
+          <div className="bg-card border border-border rounded-xl p-6 mb-8">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              Új anime kérés
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="req-title">Anime neve *</Label>
+                <Input
+                  id="req-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="pl. Demon Slayer, Attack on Titan..."
+                  className="bg-background"
+                  required
+                  data-testid="input-request-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="req-message">Megjegyzés (opcionális)</Label>
+                <Textarea
+                  id="req-message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Miért szeretnéd látni? Van megjegyzésed?"
+                  className="bg-background min-h-[80px]"
+                  data-testid="textarea-request-message"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="gap-2"
+                data-testid="button-submit-request"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Kérés küldése
+              </Button>
+            </form>
+          </div>
 
-          {/* Filters */}
-          <div className="flex items-center justify-between mb-4 gap-3">
+          {/* Filters + Sort */}
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <h2 className="font-semibold text-foreground">
-              {canManage ? "Beérkezett kérések" : "Saját kéréseim"}
+              {canManage ? "Beérkezett kérések" : "Közösségi kérések"}
               {requests && (
                 <span className="ml-2 text-sm font-normal text-muted-foreground">({filtered.length})</span>
               )}
             </h2>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40 bg-background" data-testid="select-status-filter">
-                <SelectValue placeholder="Szűrés" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Összes</SelectItem>
-                <SelectItem value="pending">Folyamatban</SelectItem>
-                <SelectItem value="approved">Elfogadva</SelectItem>
-                <SelectItem value="rejected">Elutasítva</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-card border border-border rounded-lg p-0.5">
+                <button
+                  onClick={() => setSortBy("top")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    sortBy === "top" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="button-sort-top"
+                >
+                  <TrendingUp className="h-3.5 w-3.5" /> Top
+                </button>
+                <button
+                  onClick={() => setSortBy("new")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    sortBy === "new" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="button-sort-new"
+                >
+                  <Calendar className="h-3.5 w-3.5" /> Új
+                </button>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36 bg-background" data-testid="select-status-filter">
+                  <SelectValue placeholder="Szűrés" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Összes</SelectItem>
+                  <SelectItem value="pending">Folyamatban</SelectItem>
+                  <SelectItem value="approved">Elfogadva</SelectItem>
+                  <SelectItem value="rejected">Elutasítva</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-xl" />
+                <Skeleton key={i} className="h-24 rounded-xl" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-40" />
               <p className="text-muted-foreground text-lg">Még nincs kérés.</p>
-              {!canManage && (
-                <p className="text-muted-foreground text-sm mt-1">
-                  Küldj egy kérést fentebb!
-                </p>
-              )}
+              <p className="text-muted-foreground text-sm mt-1">
+                Légy te az első, küldj egy kérést fentebb!
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filtered.map((req) => (
-                <RequestCard
-                  key={req.id}
-                  request={req}
-                  isOwn={req.user_id === user?.id}
-                  canManage={canManage}
-                  onUpdate={refetch}
-                />
-              ))}
+              <AnimatePresence>
+                {filtered.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    isOwn={req.user_id === user?.id}
+                    canManage={canManage}
+                    voteCount={voteCounts.get(req.id) || 0}
+                    hasVoted={myVotes.has(req.id)}
+                    voting={votingId === req.id}
+                    onVoteToggle={() => handleVote(req.id, myVotes.has(req.id))}
+                    onUpdate={refetch}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
