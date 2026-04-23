@@ -369,6 +369,8 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
   const updateStatus = useUpdateOrderStatus();
   const updateCourier = useUpdateCourier();
   const statuses = Object.keys(STATUS_LABELS);
+  const { data: products = [] } = useShopProducts();
+  const productMap = new Map(products.map((p) => [p.id, p]));
 
   return (
     <div className="glass border border-border/40 rounded-xl overflow-hidden">
@@ -446,15 +448,49 @@ const OrderRow = ({ order }: { order: ShopOrder }) => {
           {order.shop_order_items && order.shop_order_items.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-2">Rendelt termékek:</p>
-              <div className="space-y-1.5">
-                {order.shop_order_items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-foreground">{item.product_name} × {item.quantity}
-                      {item.custom_note && <span className="text-muted-foreground"> ({item.custom_note})</span>}
-                    </span>
-                    <span className="text-primary">{formatPrice(item.product_price * item.quantity)}</span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {order.shop_order_items.map((item) => {
+                  const p = item.product_id ? productMap.get(item.product_id) : undefined;
+                  const img = p?.images?.[0] || null;
+                  const cat = formatCategory(p?.category);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 bg-background/40 border border-border/40 rounded-lg p-2"
+                    >
+                      {img ? (
+                        <img
+                          src={img}
+                          alt={item.product_name}
+                          className="w-14 h-14 rounded-md object-cover border border-border/40 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-md bg-background/60 border border-border/40 flex items-center justify-center text-muted-foreground shrink-0">
+                          <Package className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">
+                          {item.product_name}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <Badge className="bg-primary/15 text-primary border-primary/30 text-[10px] uppercase tracking-wider">
+                            {cat}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            × <strong className="text-foreground">{item.quantity}</strong> · {formatPrice(item.product_price)}
+                          </span>
+                        </div>
+                        {item.custom_note && (
+                          <div className="text-xs text-muted-foreground mt-0.5">📝 {item.custom_note}</div>
+                        )}
+                      </div>
+                      <div className="text-sm font-bold text-primary shrink-0">
+                        {formatPrice(item.product_price * item.quantity)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

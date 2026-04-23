@@ -414,17 +414,68 @@ async function createServer() {
     return res.json();
   }
 
+  // Fetch product images + categories and merge into order items.
+  // Falls back gracefully if Supabase is unreachable — items just won't have images.
+  const CATEGORY_LABEL = {
+    polo: "Póló", "póló": "Póló",
+    bogre: "Bögre", "bögre": "Bögre",
+    matrica: "Matrica", poszter: "Poszter",
+    kulcstarto: "Kulcstartó", "kulcstartó": "Kulcstartó",
+    manga: "Manga", egyeb: "Egyéb", "egyéb": "Egyéb",
+  };
+  function formatCategory(c) {
+    if (!c) return "Egyéb";
+    return CATEGORY_LABEL[String(c).toLowerCase()] || (c.charAt(0).toUpperCase() + c.slice(1));
+  }
+  async function enrichOrderItems(items) {
+    if (!Array.isArray(items) || items.length === 0) return [];
+    const ids = Array.from(new Set(items.map((i) => i && i.product_id).filter(Boolean)));
+    if (!ids.length || !SUPABASE_URL || !SUPABASE_KEY) {
+      return items.map((i) => ({ ...i, image: null, category: formatCategory(null) }));
+    }
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/shop_products?id=in.(${ids.join(",")})&select=id,images,category`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      const data = r.ok ? await r.json() : [];
+      const map = new Map((data || []).map((p) => [p.id, p]));
+      return items.map((i) => {
+        const p = map.get(i.product_id) || {};
+        return { ...i, image: (p.images && p.images[0]) || null, category: formatCategory(p.category) };
+      });
+    } catch (err) {
+      console.warn("enrichOrderItems failed:", err.message);
+      return items.map((i) => ({ ...i, image: null, category: formatCategory(null) }));
+    }
+  }
+  function buildOrderItemsHtml(items) {
+    return (items || []).map((i) => {
+      const imgCell = i.image
+        ? `<td style="width:72px;padding:8px 12px 8px 12px;vertical-align:top;"><img src="${String(i.image).replace(/"/g, "&quot;")}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #2a2a3a;display:block;"/></td>`
+        : `<td style="width:72px;padding:8px 12px;vertical-align:top;"><div style="width:64px;height:64px;border-radius:8px;background:#1a1a2e;border:1px solid #2a2a3a;"></div></td>`;
+      const cat = i.category ? `<div style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a78bfa;background:#7c3aed22;padding:2px 8px;border-radius:999px;margin-top:4px;">${i.category}</div>` : "";
+      const note = i.custom_note ? `<div style="font-size:12px;color:#94a3b8;margin-top:4px;">📝 ${String(i.custom_note)}</div>` : "";
+      return `<tr style="border-bottom:1px solid #2a2a3a;">
+        ${imgCell}
+        <td style="padding:8px 12px;vertical-align:top;color:#e2e8f0;">
+          <div style="font-weight:600;">${i.product_name}</div>
+          ${cat}
+          <div style="font-size:13px;color:#94a3b8;margin-top:4px;">Mennyiség: <strong style="color:#e2e8f0;">${i.quantity}</strong> · Egységár: <strong style="color:#e2e8f0;">${formatHuf(i.product_price)}</strong></div>
+          ${note}
+        </td>
+        <td style="padding:8px 12px;vertical-align:top;text-align:right;color:#a78bfa;font-weight:700;white-space:nowrap;">${formatHuf(i.product_price * i.quantity)}</td>
+      </tr>`;
+    }).join("");
+  }
+
   app.post("/api/order-status-notify", async (req, res) => {
     try {
-      const { order, items, newStatus } = req.body;
+      const { order, items: rawItems, newStatus } = req.body;
+      const items = await enrichOrderItems(rawItems);
       if (!order || !newStatus) return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
 
-      const itemsHtml = (items || []).map(
-        (i) => `<tr>
-          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a">${i.product_name} × ${i.quantity}${i.custom_note ? ` <em>(${i.custom_note})</em>` : ""}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a;text-align:right">${formatHuf(i.product_price * i.quantity)}</td>
-        </tr>`
-      ).join("");
+      const itemsHtml = buildOrderItemsHtml(items);
 
       const statusMessages = {
         confirmed: {
@@ -476,8 +527,8 @@ async function createServer() {
           <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden;margin-bottom:20px">
             ${itemsHtml}
             <tr style="background:#2a2a3a">
-              <td style="padding:8px 12px;font-weight:bold">Összesen</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
+              <td colspan="2" style="padding:10px 12px;font-weight:bold">Összesen</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
             </tr>
           </table>` : ""}
           <p style="color:#94a3b8;font-size:13px;margin-top:24px;border-top:1px solid #2a2a3a;padding-top:16px">
@@ -496,14 +547,9 @@ async function createServer() {
 
   app.post("/api/order-notify", async (req, res) => {
     try {
-      const { order, items } = req.body;
-
-      const itemsHtml = (items || []).map(
-        (i) => `<tr>
-          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a">${i.product_name} × ${i.quantity}${i.custom_note ? ` <em>(${i.custom_note})</em>` : ""}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #2a2a3a;text-align:right">${formatHuf(i.product_price * i.quantity)}</td>
-        </tr>`
-      ).join("");
+      const { order, items: rawItems } = req.body;
+      const items = await enrichOrderItems(rawItems);
+      const itemsHtml = buildOrderItemsHtml(items);
 
       const adminHtml = `
         <div style="font-family:Arial,sans-serif;background:#0d0d1a;color:#e2e8f0;padding:32px;border-radius:12px;max-width:600px">
@@ -520,8 +566,8 @@ async function createServer() {
           <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden">
             ${itemsHtml}
             <tr style="background:#2a2a3a">
-              <td style="padding:8px 12px;font-weight:bold">Összesen</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
+              <td colspan="2" style="padding:10px 12px;font-weight:bold">Összesen</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
             </tr>
           </table>
         </div>`;
@@ -549,8 +595,8 @@ async function createServer() {
           <table style="width:100%;border-collapse:collapse;background:#1a1a2e;border-radius:8px;overflow:hidden;margin-bottom:20px">
             ${itemsHtml}
             <tr style="background:#2a2a3a">
-              <td style="padding:8px 12px;font-weight:bold">Összesen</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
+              <td colspan="2" style="padding:10px 12px;font-weight:bold">Összesen</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:bold;color:#a78bfa">${formatHuf(order.total_price)}</td>
             </tr>
           </table>
           <p style="color:#94a3b8;font-size:13px;margin-top:24px;border-top:1px solid #2a2a3a;padding-top:16px">
