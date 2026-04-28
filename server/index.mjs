@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import archiver from "archiver";
+import axios from "axios";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -135,6 +136,87 @@ async function createServer() {
   });
 
   const NOTIFY_EMAILS = ["alexszilagyi26@gmail.com", "davidbotos1998@gmail.com"];
+
+  // --- Discord webhook helper ---
+  // Sends a rich embed to the "új rész" channel (the channel is determined
+  // by which webhook URL is configured in DISCORD_EPISODE_WEBHOOK_URL).
+  async function fetchAnimeMeta(animeId) {
+    if (!SUPABASE_URL || !animeId) return null;
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/animes?id=eq.${encodeURIComponent(animeId)}&select=title,image_url`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      if (!r.ok) return null;
+      const rows = await r.json();
+      return rows[0] || null;
+    } catch (e) {
+      console.warn("[fetchAnimeMeta] failed:", e.message);
+      return null;
+    }
+  }
+
+  async function sendDiscordEpisodeNotification({
+    animeId,
+    animeTitle,
+    episodeNumber,
+    episodeTitle,
+    animeSlug,
+    imageUrl,
+    siteHost,
+  }) {
+    const webhookUrl = process.env.DISCORD_EPISODE_WEBHOOK_URL;
+    if (!webhookUrl) {
+      return { ok: false, skipped: true, reason: "DISCORD_EPISODE_WEBHOOK_URL nincs beállítva" };
+    }
+
+    let image = imageUrl;
+    let title = animeTitle;
+    if (!image || !title) {
+      const meta = await fetchAnimeMeta(animeId);
+      if (meta) {
+        title = title || meta.title;
+        image = image || meta.image_url;
+      }
+    }
+
+    const baseUrl = siteHost ? `https://${siteHost}` : "https://axelsub.eu";
+    const link = `${baseUrl}/anime/${animeSlug || animeId}`;
+    const safeTitle = title || "Új epizód";
+    const epLine = episodeTitle
+      ? `**${episodeNumber}. epizód** — ${episodeTitle}`
+      : `**${episodeNumber}. epizód** érkezett!`;
+
+    const payload = {
+      username: "AxelSub",
+      avatar_url: "https://axelsub.eu/favicon.png",
+      content: `🎌 **${safeTitle}** – ${episodeNumber}. rész elérhető!`,
+      embeds: [
+        {
+          title: `🎬 ${safeTitle}`,
+          description: `${epLine}\n\n[▶ Megnézem most!](${link})`,
+          url: link,
+          color: 0x7c3aed,
+          image: image ? { url: image } : undefined,
+          footer: { text: "AxelSub – Magyar feliratú animék" },
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    try {
+      const res = await axios.post(webhookUrl, payload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      });
+      return { ok: true, status: res.status };
+    } catch (err) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+      console.warn(`[discord-webhook] hiba ${status || ""}:`, err.message, data || "");
+      return { ok: false, status, error: err.message };
+    }
+  }
 
   const formatHuf = (n) =>
     new Intl.NumberFormat("hu-HU", { style: "currency", currency: "HUF", maximumFractionDigits: 0 }).format(n);
@@ -650,10 +732,29 @@ async function createServer() {
   // --- Episode notification endpoint ---
   app.post("/api/episode-notify", async (req, res) => {
     try {
-      const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers, recipients: clientRecipients } = req.body;
+      const { animeId, animeTitle, episodeNumber, episodeTitle, animeSlug, imageUrl, notifyAllUsers, recipients: clientRecipients } = req.body;
       if (!animeId || !animeTitle || !episodeNumber) {
         return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
       }
+
+      // Fire-and-forget Discord notification to the "új rész" channel.
+      // Runs in parallel with the email flow; never blocks the response.
+      const discordPromise = sendDiscordEpisodeNotification({
+        animeId,
+        animeTitle,
+        episodeNumber,
+        episodeTitle,
+        animeSlug,
+        imageUrl,
+        siteHost: req.headers.host,
+      }).then((r) => {
+        if (r.ok) {
+          console.log(`[discord-webhook] elküldve – ${animeTitle} ${episodeNumber}. rész`);
+        } else if (r.skipped) {
+          console.log(`[discord-webhook] kihagyva: ${r.reason}`);
+        }
+        return r;
+      });
 
       let recipients = [];
       let fetchError = null;
@@ -694,10 +795,12 @@ async function createServer() {
       }
 
       if (!recipients.length) {
+        const discordResult = await discordPromise;
         return res.json({
           ok: true,
           sent: 0,
           total: 0,
+          discord: discordResult,
           message: fetchError || (notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó"),
           error: fetchError,
         });
@@ -728,7 +831,8 @@ async function createServer() {
       }
 
       console.log(`Episode notify (${notifyAllUsers ? "ALL" : "subs"}): ${sent}/${recipients.length} e-mail elküldve – ${animeTitle} ${episodeNumber}. rész`);
-      res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers" });
+      const discordResult = await discordPromise;
+      res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers", discord: discordResult });
     } catch (err) {
       console.error("Episode notify error:", err.message);
       res.status(500).json({ ok: false, error: err.message });
