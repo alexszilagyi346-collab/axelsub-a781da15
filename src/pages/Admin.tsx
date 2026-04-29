@@ -566,7 +566,7 @@ AxelSub csapata 🎌`);
       // Wait for Discord result and report it separately.
       const discord = await discordPromise;
       if (discord.ok && (discord.data as any)?.ok) {
-        toast.success("📣 Discord értesítő kiment az „új rész" csatornára!");
+        toast.success('📣 Discord értesítő kiment az „új rész" csatornára!');
       } else {
         const errMsg = (discord.data as any)?.error || "ismeretlen hiba";
         toast.error(`Discord hiba: ${errMsg}`);
