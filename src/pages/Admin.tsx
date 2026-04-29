@@ -496,6 +496,25 @@ AxelSub csapata 🎌`);
   const handleSend = async () => {
     if (!selectedAnime || !selectedEpisode) return toast.error("Válassz animét és epizódot!");
     setSending(true);
+
+    const discordPayload = {
+      animeId: selectedAnimeId,
+      animeTitle: selectedAnime.title,
+      episodeNumber: selectedEpisode.episode_number,
+      episodeTitle: selectedEpisode.title || null,
+      animeSlug: selectedAnimeId,
+      imageUrl: (selectedAnime as any).image_url || null,
+    };
+
+    // Always fire Discord in parallel — it's independent of the email flow.
+    const discordPromise = fetch(apiUrl("/api/discord-notify"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(discordPayload),
+    })
+      .then(async (r) => ({ ok: r.ok, data: await r.json().catch(() => ({})) }))
+      .catch((e) => ({ ok: false, data: { error: e.message } }));
+
     try {
       // If sending to everyone, fetch the user list directly via RPC
       // (this works without service-role key — uses SECURITY DEFINER function).
@@ -503,48 +522,54 @@ AxelSub csapata 🎌`);
       if (notifyAllUsers) {
         const { data, error } = await supabase.rpc("get_all_users_for_email" as any);
         if (error) {
-          throw new Error(
-            `Felhasználói lista lekérése sikertelen: ${error.message}. ` +
-            `Futtatd le a get_all_users_for_email() SQL függvényt a Supabase SQL editorban!`
-          );
-        }
-        recipients = ((data as any[]) || [])
-          .filter((u) => u && u.email)
-          .map((u) => ({
-            userId: u.user_id,
-            email: u.email,
-            name: u.display_name || (u.email as string).split("@")[0],
-          }));
-        if (recipients.length === 0) {
-          throw new Error("Nincs regisztrált felhasználó a listában (RPC üres listát adott vissza).");
+          toast.error(`Felhasználói lista hiba: ${error.message}`);
+        } else {
+          recipients = ((data as any[]) || [])
+            .filter((u) => u && u.email)
+            .map((u) => ({
+              userId: u.user_id,
+              email: u.email,
+              name: u.display_name || (u.email as string).split("@")[0],
+            }));
         }
       }
 
-      const res = await fetch(apiUrl("/api/episode-notify"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({
-          animeId: selectedAnimeId,
-          animeTitle: selectedAnime.title,
-          episodeNumber: selectedEpisode.episode_number,
-          episodeTitle: selectedEpisode.title || null,
-          animeSlug: selectedAnimeId,
-          imageUrl: (selectedAnime as any).image_url || null,
-          notifyAllUsers,
-          recipients,
-        }),
-      });
-      if (!res.ok) {
-        const raw = await res.text();
-        console.error("[episode-notify] szerver hiba – nyers válasz:", raw);
-        throw new Error(`Szerver hiba (${res.status}): ${raw.slice(0, 120)}`);
-      }
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error);
-      if (data.sent === 0) {
-        toast.warning(data.message || data.error || `Nincs címzett (${notifyAllUsers ? "regisztrált felhasználó" : "feliratkozó"})!`);
+      // Only call email endpoint if we have something to send (or in subscriber mode where backend resolves the list)
+      if (!notifyAllUsers || recipients.length > 0) {
+        const res = await fetch(apiUrl("/api/episode-notify"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            ...discordPayload,
+            notifyAllUsers,
+            recipients,
+          }),
+        });
+        if (!res.ok) {
+          const raw = await res.text();
+          console.error("[episode-notify] szerver hiba – nyers válasz:", raw);
+          toast.error(`Email szerver hiba (${res.status})`);
+        } else {
+          const data = await res.json();
+          if (!data.ok) {
+            toast.error(`Email hiba: ${data.error || "ismeretlen"}`);
+          } else if (data.sent === 0) {
+            toast.warning(data.message || `Nincs email címzett (${notifyAllUsers ? "regisztrált felhasználó" : "feliratkozó"})`);
+          } else {
+            toast.success(`✅ Email elküldve ${data.sent}/${data.total ?? data.sent} ${notifyAllUsers ? "felhasználónak" : "feliratkozónak"}!`);
+          }
+        }
       } else {
-        toast.success(`✅ Email elküldve ${data.sent}/${data.total ?? data.sent} ${notifyAllUsers ? "felhasználónak" : "feliratkozónak"}!`);
+        toast.warning("Nincs regisztrált felhasználó az emailhez — csak Discord értesítő megy ki.");
+      }
+
+      // Wait for Discord result and report it separately.
+      const discord = await discordPromise;
+      if (discord.ok && (discord.data as any)?.ok) {
+        toast.success("📣 Discord értesítő kiment az „új rész" csatornára!");
+      } else {
+        const errMsg = (discord.data as any)?.error || "ismeretlen hiba";
+        toast.error(`Discord hiba: ${errMsg}`);
       }
     } catch (err: any) {
       console.error("[episode-notify] hiba:", err);
