@@ -28,7 +28,8 @@ import {
   Mail,
   Bot,
   SendHorizonal,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from "lucide-react";
 import EpisodeManager from "@/components/EpisodeManager";
 import SocialLinksManager from "@/components/SocialLinksManager";
@@ -219,6 +220,223 @@ const UserManagement = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+// ---- Discord küldés tab (független az emailtől) ----
+const DiscordSendTab = () => {
+  const { data: animes } = useAnimes();
+  const [selectedAnimeId, setSelectedAnimeId] = useState("");
+  const [episodes, setEpisodes] = useState<any[]>([]);
+  const [selectedEpisode, setSelectedEpisode] = useState<any>(null);
+  const [loadingEps, setLoadingEps] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [lastResult, setLastResult] = useState<{ ok: boolean; message: string; at: Date } | null>(null);
+
+  const selectedAnime = animes?.find((a) => a.id === selectedAnimeId);
+
+  useEffect(() => {
+    if (!selectedAnimeId) {
+      setEpisodes([]);
+      setSelectedEpisode(null);
+      return;
+    }
+    setLoadingEps(true);
+    supabase
+      .from("episodes")
+      .select("id, episode_number, title")
+      .eq("anime_id", selectedAnimeId)
+      .order("episode_number", { ascending: false })
+      .then(({ data }) => {
+        setEpisodes(data || []);
+        setSelectedEpisode(null);
+        setLoadingEps(false);
+      });
+  }, [selectedAnimeId]);
+
+  const handleSendDiscord = async () => {
+    if (!selectedAnime || !selectedEpisode) {
+      return toast.error("Válassz animét és epizódot!");
+    }
+    setSending(true);
+    try {
+      const res = await fetch(apiUrl("/api/discord-notify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          animeId: selectedAnimeId,
+          animeTitle: selectedAnime.title,
+          episodeNumber: selectedEpisode.episode_number,
+          episodeTitle: selectedEpisode.title || null,
+          animeSlug: selectedAnimeId,
+          imageUrl: (selectedAnime as any).image_url || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.error || `Szerver hiba (${res.status})`;
+        setLastResult({ ok: false, message: msg, at: new Date() });
+        throw new Error(msg);
+      }
+      setLastResult({
+        ok: true,
+        message: `Discord értesítő elküldve – ${selectedAnime.title} ${selectedEpisode.episode_number}. rész`,
+        at: new Date(),
+      });
+      toast.success("✅ Discord értesítő elküldve az „új rész” csatornára!");
+    } catch (err: any) {
+      console.error("[discord-notify] hiba:", err);
+      toast.error(`Discord hiba: ${err.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleTestPing = async () => {
+    setSending(true);
+    try {
+      const res = await fetch(apiUrl("/api/discord-notify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          animeId: "00000000-0000-0000-0000-000000000000",
+          animeTitle: "🔔 Teszt értesítő",
+          episodeNumber: 0,
+          episodeTitle: "Ez egy próba üzenet az adminból",
+          animeSlug: "teszt",
+          imageUrl: "https://axelsub.eu/favicon.png",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || `Szerver hiba (${res.status})`);
+      toast.success("✅ Teszt üzenet kiment a Discord csatornára!");
+      setLastResult({ ok: true, message: "Teszt üzenet sikeresen elküldve", at: new Date() });
+    } catch (err: any) {
+      toast.error(`Teszt hiba: ${err.message}`);
+      setLastResult({ ok: false, message: err.message, at: new Date() });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <MessageSquare className="h-6 w-6 text-indigo-400" /> Discord küldés
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          Manuálisan küldj értesítőt az <span className="text-indigo-400 font-semibold">„új rész"</span> Discord csatornára. Ez teljesen független az email küldéstől — csak a Discord webhookot használja.
+        </p>
+      </div>
+
+      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 flex items-start gap-2 text-sm text-indigo-300">
+        <Sparkles className="h-4 w-4 shrink-0 mt-0.5" />
+        <div>
+          Az üzenet tartalmazza az anime <strong>címét</strong>, az epizód <strong>számát + címét</strong>, az anime <strong>borítóképét</strong>, és egy közvetlen <strong>linket</strong> az epizódra.
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-sm text-muted-foreground mb-2 block">Anime kiválasztása</Label>
+          <select
+            value={selectedAnimeId}
+            onChange={(e) => setSelectedAnimeId(e.target.value)}
+            className="w-full rounded-lg bg-background/50 border border-border/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500/50"
+          >
+            <option value="">— Válassz animét —</option>
+            {animes?.map((a) => (
+              <option key={a.id} value={a.id}>{a.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label className="text-sm text-muted-foreground mb-2 block">Epizód kiválasztása</Label>
+          {loadingEps ? (
+            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Epizódok betöltése...
+            </div>
+          ) : (
+            <select
+              value={selectedEpisode?.id || ""}
+              onChange={(e) => setSelectedEpisode(episodes.find((ep) => ep.id === e.target.value) || null)}
+              disabled={!selectedAnimeId || episodes.length === 0}
+              className="w-full rounded-lg bg-background/50 border border-border/50 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500/50 disabled:opacity-50"
+            >
+              <option value="">— Válassz epizódot —</option>
+              {episodes.map((ep) => (
+                <option key={ep.id} value={ep.id}>
+                  {ep.episode_number}. rész{ep.title ? ` – ${ep.title}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {selectedAnime && selectedEpisode && (
+        <div className="bg-background/40 border border-border/50 rounded-xl p-4 space-y-2">
+          <div className="text-xs text-muted-foreground uppercase tracking-wider">Előnézet</div>
+          <div className="flex gap-3 items-start">
+            {(selectedAnime as any).image_url && (
+              <img
+                src={(selectedAnime as any).image_url}
+                alt=""
+                className="h-20 w-14 rounded object-cover border border-border/50 shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <div className="font-semibold text-foreground">🎬 {selectedAnime.title}</div>
+              <div className="text-sm text-muted-foreground">
+                <strong>{selectedEpisode.episode_number}. epizód</strong>
+                {selectedEpisode.title ? ` — ${selectedEpisode.title}` : " érkezett!"}
+              </div>
+              <div className="text-xs text-indigo-400 mt-1 truncate">▶ /anime/{selectedAnimeId}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button
+          onClick={handleSendDiscord}
+          disabled={sending || !selectedEpisode}
+          className="flex-1 bg-indigo-600 hover:bg-indigo-500 gap-2"
+        >
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+          {sending ? "Küldés..." : "Küldés a Discord „új rész” csatornára"}
+        </Button>
+        <Button
+          onClick={handleTestPing}
+          disabled={sending}
+          variant="outline"
+          className="gap-2 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
+        >
+          <Bot className="h-4 w-4" />
+          Teszt üzenet
+        </Button>
+      </div>
+
+      {lastResult && (
+        <div
+          className={`rounded-xl px-4 py-3 text-sm flex items-start gap-2 ${
+            lastResult.ok
+              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
+              : "bg-destructive/10 border border-destructive/20 text-destructive"
+          }`}
+        >
+          {lastResult.ok ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" /> : <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />}
+          <div>
+            <div className="font-semibold">{lastResult.message}</div>
+            <div className="text-xs opacity-70 mt-0.5">
+              {lastResult.at.toLocaleTimeString("hu-HU")}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -779,6 +997,7 @@ const Admin = () => {
                 <TabsTrigger value="users" className="gap-2"><Shield className="h-4 w-4" /> Jogosultságok</TabsTrigger>
               )}
               <TabsTrigger value="email" className="gap-2"><Mail className="h-4 w-4" /> Email küldés</TabsTrigger>
+              <TabsTrigger value="discord" className="gap-2"><MessageSquare className="h-4 w-4" /> Discord küldés</TabsTrigger>
               <TabsTrigger value="settings" className="gap-2"><BookOpen className="h-4 w-4" /> Beállítások</TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="secrets" className="gap-2"><Lock className="h-4 w-4" /> Titkok</TabsTrigger>
@@ -978,6 +1197,11 @@ const Admin = () => {
             {/* EMAIL KÜLDÉS TAB */}
             <TabsContent value="email">
               <EmailSendTab />
+            </TabsContent>
+
+            {/* DISCORD KÜLDÉS TAB */}
+            <TabsContent value="discord">
+              <DiscordSendTab />
             </TabsContent>
 
             {/* BEÁLLÍTÁSOK TAB */}
