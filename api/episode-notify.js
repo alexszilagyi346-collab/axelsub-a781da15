@@ -1,4 +1,4 @@
-import { sendEmail, fetchAnimeSubscribers, fetchAllRegisteredUsers, setCors } from "./_helpers.js";
+import { sendEmail, fetchAnimeSubscribers, fetchAllRegisteredUsers, sendDiscordEpisodeNotification, setCors } from "./_helpers.js";
 
 export default async function handler(req, res) {
   setCors(res, req);
@@ -6,9 +6,20 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
 
   try {
-    const { animeId, animeTitle, episodeNumber, animeSlug, notifyAllUsers } = req.body;
+    const { animeId, animeTitle, episodeNumber, episodeTitle, animeSlug, imageUrl, notifyAllUsers } = req.body;
     if (!animeId || !animeTitle || !episodeNumber)
       return res.status(400).json({ ok: false, error: "Hiányzó adatok" });
+
+    // Fire-and-forget Discord notification (parallel with email flow).
+    const discordPromise = sendDiscordEpisodeNotification({
+      animeId,
+      animeTitle,
+      episodeNumber,
+      episodeTitle,
+      animeSlug,
+      imageUrl,
+      siteHost: req.headers.host,
+    }).catch((e) => ({ ok: false, error: e.message }));
 
     let recipients = [];
     if (notifyAllUsers) {
@@ -25,7 +36,8 @@ export default async function handler(req, res) {
     }
 
     if (!recipients.length) {
-      return res.json({ ok: true, sent: 0, message: notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó" });
+      const discord = await discordPromise;
+      return res.json({ ok: true, sent: 0, discord, message: notifyAllUsers ? "Nincs regisztrált felhasználó" : "Nincs feliratkozó" });
     }
 
     const baseUrl = "https://axelsub.eu";
@@ -69,7 +81,8 @@ export default async function handler(req, res) {
       }
     }
 
-    res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers" });
+    const discord = await discordPromise;
+    res.json({ ok: true, sent, total: recipients.length, mode: notifyAllUsers ? "all" : "subscribers", discord });
   } catch (err) {
     console.error("episode-notify error:", err.message);
     res.status(500).json({ ok: false, error: err.message });
